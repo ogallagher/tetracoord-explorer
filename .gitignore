@@ -1,0 +1,9 @@
+local/
+**/logs/
+**/.DS_Store
+
+node_modules/
+**/*.js
+**/*.js.map
+
+**tsconfig.json

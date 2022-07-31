@@ -1,0 +1,33 @@
+{
+  "name": "tetracoord-explorer",
+  "version": "0.0.1",
+  "description": "Tetracoordinates engine, grapher, calculator, playground.",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ogallagher/tetracoord-explorer.git"
+  },
+  "keywords": [
+    "tetracoordinates",
+    "typescript",
+    "geometry",
+    "2d",
+    "math",
+    "number-system",
+    "arithmetic"
+  ],
+  "author": "Owen Gallagher",
+  "license": "SEE LICENSE IN license.txt",
+  "bugs": {
+    "url": "https://github.com/ogallagher/tetracoord-explorer/issues"
+  },
+  "homepage": "https://github.com/ogallagher/tetracoord-explorer#readme",
+  "devDependencies": {
+    "@types/node": "^18.6.3",
+    "temp_js_logger": "^0.6.0",
+    "typescript": "^4.7.4"
+  }
+}
