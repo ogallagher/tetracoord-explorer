@@ -4,16 +4,15 @@
 
 // imports
 
-import Vector = require('victor')
+import { 
+    TRIG_PI,
+    TRIG_SIN_PI_OVER_6,
+    TRIG_COS_PI_OVER_6,
+    Vector2D, 
+    CartesianCoordinate 
+} from './vector2d'
 
 // constants
-
-const TRIG_PI = Math.PI
-const TRIG_PI_OVER_2 = Math.PI / 2
-const TRIG_SIN_PI_OVER_6 = 0.5
-const TRIG_COS_PI_OVER_6 = Math.sqrt(3)/2
-const TRIG_SIN_PI_OVER_3 = TRIG_COS_PI_OVER_6
-const TRIG_COS_PI_OVER_3 = TRIG_SIN_PI_OVER_6
 
 // types
 
@@ -35,11 +34,6 @@ enum TetracoordQuadOrder {
 }
 
 // typescript types, interfaces
-
-interface CartesianCoordinate {
-    x: number,
-    y: number
-}
 
 // classes
 
@@ -246,20 +240,22 @@ export class Tetracoordinate {
 
     /**
      * Get equivalent cartesian point.
+     * TODO fix flip logic
+     * TODO handle irrational
      * TODO handle orientation!=DEFAULT
      * 
      * @param {Orientation} orientation
      * 
      * @returns Equivalent point vector in cartesian 2d (x,y) space.
      */
-    get_cartesian_coord(orientation: Orientation=undefined): CartesianCoordinate {
+    to_cartesian_coord(orientation: Orientation=undefined): CartesianCoordinate {
         if (orientation === undefined) {
             orientation = Orientation.DEFAULT
         }
 
         // for each quad digit, calculate unit cartesian vector, and flip+scale by level power
         let quads: Array<string> = this.get_quad_strs()
-        let vectors: Array<Vector> = new Array(this.num_levels)
+        let vectors: Array<Vector2D> = new Array(this.num_levels)
         let level = (
             this.quad_order === TetracoordQuadOrder.HIGH_FIRST ? this.num_levels-1 : 0
         ) + this.power
@@ -288,7 +284,7 @@ export class Tetracoordinate {
                     break
             }
 
-            let v = new Vector(uc.x, uc.y)
+            let v = new Vector2D(uc.x, uc.y)
             
             // flip
             if (!level_even) {
@@ -305,7 +301,7 @@ export class Tetracoordinate {
             level_even = !level_even
         }
 
-        let vector: Vector = vectors.reduce((prev: Vector, curr: Vector) => {
+        let vector: Vector2D = vectors.reduce((prev: Vector2D, curr: Vector2D) => {
             return prev.add(curr)
         })
 
@@ -315,6 +311,13 @@ export class Tetracoordinate {
         }
     }
 
+    /**
+     * TODO handle irrationals
+     * 
+     * @param other {Tetracoordinate} Other tcoord for comparison.
+     * 
+     * @returns {boolean} true if the two tcoords are equal.
+     */
     equals(other: Tetracoordinate): boolean {
         if (other instanceof Tetracoordinate) {
             let this_quad_str = this.get_quad_strs()
@@ -329,6 +332,50 @@ export class Tetracoordinate {
         else {
             return false
         }
+    }
+
+    // arithmetic
+
+    /**
+     * Negate this tcoord.
+     * 
+     * All of the following negated values for nonzero unit tcoord z are equivalent. This
+     * method uses the first.
+     * 
+     * ```
+     * -z =  0.z... <-- [-power & -irrational]
+     *       x.y...
+     *       y.x...
+     *      zx.y...
+     *      zy.x...
+     *      z0.z...
+     * ```
+     */
+    negate(): Tetracoordinate {
+        throw new Error('native negate not yet implemented')
+        return this
+    }
+
+    negate_from_cartesian(): Tetracoordinate {
+        throw new Error('cartesian negate not yet implemented')
+        return this
+    }
+
+    add(other: Tetracoordinate): Tetracoordinate {
+        throw new Error('native add not yet implemented')
+        return this
+    }
+
+    add_from_cartesian(other: Tetracoordinate): Tetracoordinate {
+        let cthis = this.to_cartesian_coord()
+        let cother = other.to_cartesian_coord()
+
+        Tetracoordinate.from_cartesian_coord(
+            {x: cthis.x + cother.x, y: cthis.y + cother.y}
+        )
+
+        throw new Error('cartesian add not yet implemented')
+        return this
     }
 
     /**
@@ -378,15 +425,149 @@ export class Tetracoordinate {
         return (
             `tcoord(` +
             `bytes=${this.get_byte_strs().join('-')}q ` + 
-            `power=${this.power} order=${this.quad_order} levels=${this.num_levels}` + 
+            `power=${this.power} order=${this.quad_order} levels=${this.num_levels} ` +
+            `irrational=${this.irrational}` + 
             `)`
         )
+    }
+
+    /**
+     * 
+     * @param ccoord Cartesian coord to convert.
+     * @param precision Precision determines min level for rounding to nearest tcoord.
+     * @param quad_order 
+     * @param orientation
+     * 
+     * @returns Equivalent tcoord.
+     */
+    static from_cartesian_coord(
+        ccoord: CartesianCoordinate, 
+        precision: number=undefined,
+        quad_order: TetracoordQuadOrder=undefined,
+        orientation: Orientation=undefined
+    ): Tetracoordinate {
+        quad_order = (quad_order === undefined) ? TetracoordQuadOrder.DEFAULT : quad_order
+
+        // dist from cell centroid to edge is 1/2 at level 0
+        precision = (precision === undefined) ? 0 : Math.trunc(precision)
+        const min_dist = Math.pow(2, precision) / 2
+
+        let target: Vector2D = Vector2D.fromObject(ccoord)
+        let loc: Vector2D = new Vector2D(0, 0)
+        let delta: Vector2D = Vector2D.subtract(target, loc)
+        let dist: number = delta.magnitude()
+        let prev_loc: Vector2D, prev_delta: Vector2D, prev_dist: number
+
+        // min safe level needed to reach the target
+        let scale: number = Math.ceil(Math.log2(delta.magnitude()))
+        let power: number = scale
+        let flip = (power % 2 != 0) ? -1 : 1
+
+        let quads: Array<number> = []
+
+        // edge case delta.magnitude=0; log2=-inf
+        if (!isFinite(scale)) {
+            scale = 0
+            power = 0
+            quads.push(0)
+        }
+
+        let angle_ds: Array<number> = new Array(3)
+        let step: Vector2D
+
+        const uv_one: Vector2D = Vector2D.fromObject(Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.ONE))
+        const uv_two: Vector2D = Vector2D.fromObject(Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.TWO))
+        const uv_three: Vector2D = Vector2D.fromObject(Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.THREE))
+
+        while (dist > min_dist && power >= precision) {
+            // determine closest tcoord nonzero unit vector (direction)
+            angle_ds[0] = Vector2D.angleBetween(delta, Vector2D.multiplyScalar(uv_one, flip))
+            angle_ds[1] = Vector2D.angleBetween(delta, Vector2D.multiplyScalar(uv_two, flip))
+            angle_ds[2] = Vector2D.angleBetween(delta, Vector2D.multiplyScalar(uv_three, flip))
+
+            let angle_min = Math.min(...angle_ds)
+            let quad: number
+            switch (angle_min) {
+                case angle_ds[0]:
+                    step = uv_one.clone()
+                    quad = 1
+                    break
+
+                case angle_ds[1]:
+                    step = uv_two.clone()
+                    quad = 2
+                    break
+                
+                case angle_ds[2]:
+                    step = uv_three.clone()
+                    quad = 3
+                    break
+            }
+
+            // scale step unit vector
+            let leg = Math.pow(2, power)
+            step.multiplyScalar(leg * flip)
+
+            // update loc
+            prev_loc = loc.clone()
+            prev_delta = delta
+            prev_dist = dist
+
+            loc.add(step)
+            delta = Vector2D.subtract(target, loc)
+            dist = delta.magnitude()
+            /*
+            console.log(
+                `debug ` + 
+                `power=${power} scale=${scale} precision=${precision} ` + 
+                `quad=${quad} flip=${flip}\n` +
+                `step=${step}\n` + 
+                `prev_loc=${prev_loc}\nprev_delta=${prev_delta}\nprev_dist=${prev_dist}\n` +
+                `loc=${loc}\ndelta=${delta}\ndist=${dist}`
+            )
+            */
+
+            if (dist > prev_dist) {
+                console.log(`${dist} > ${prev_dist} --> quad=${0} -flip=${-flip}`)
+                // undo step; stay in zero
+                loc = prev_loc
+                delta = prev_delta
+                dist = prev_dist
+                step.zero()
+                quads.push(0)
+
+                // flip unit vectors for next level
+                flip = -flip
+            }
+            else {
+                console.log(`${dist} < ${prev_dist} --> quad=${quad} flip=${flip}`)
+                // add quad to number
+                quads.push(quad)
+            }
+            power--
+        }
+
+        // add fill to significant digits scale-precision
+        let fill = new Array((scale+1-precision) - quads.length)
+        if (fill.length > 0) {
+            fill.fill(0)
+            quads = quads.concat(fill)
+        }
+
+        // convert raw quads to tcoord; apply power
+        power = scale+1 - quads.length
+
+        if (quad_order == TetracoordQuadOrder.LOW_FIRST) {
+            quads.reverse()
+        }
+        return new Tetracoordinate(quads, power, quad_order)
     }
 }
 
 // Tetracoordinate overrides
 Tetracoordinate.prototype.toString = Tetracoordinate.prototype.toStringOverride
 
+// Tetracoordinate static vars
 /* tcoord to cartesian unit map
 up/default
     0 = (    0,    0)
