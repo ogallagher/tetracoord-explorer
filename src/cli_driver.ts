@@ -2,15 +2,10 @@
  * Tetracoord engine cli driver.
  */
 
-/**
- * temp_js_logger is not currently written as a module, so it requires use of the import method instead.
- */
-let templogger
+import templogger = require('temp_js_logger')
 import TetracoordinateEngine from './tetracoord_engine'
 
-function init(modules: Array<any>): Promise<any> {
-    templogger = modules[0]
-
+function init(): Promise<any> {
     return Promise.all([
         templogger.config({
             level: 'debug',
@@ -33,8 +28,4 @@ function main() {
     console.log(`info ${tengine}`)
 }
 
-Promise.all([
-    import('temp_js_logger')
-])
-.then(init)
-.then(main)
+init().then(main)

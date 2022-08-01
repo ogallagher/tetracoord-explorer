@@ -3,7 +3,5 @@ local/
 **/.DS_Store
 
 node_modules/
-**/*.js
-**/*.js.map
-
-**tsconfig.json
+src/*.js
+src/*.js.map

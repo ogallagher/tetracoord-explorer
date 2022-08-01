@@ -27,7 +27,11 @@
   "homepage": "https://github.com/ogallagher/tetracoord-explorer#readme",
   "devDependencies": {
     "@types/node": "^18.6.3",
+    "@types/victor": "^1.1.0",
     "temp_js_logger": "^0.6.0",
     "typescript": "^4.7.4"
+  },
+  "dependencies": {
+    "victor": "^1.1.0"
   }
 }
