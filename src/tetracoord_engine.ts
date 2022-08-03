@@ -92,22 +92,21 @@ export class Tetracoordinate {
         this.quad_order = quad_order === undefined ? TetracoordQuadOrder.DEFAULT : quad_order
         this.bytes = new Uint8Array(Tetracoordinate.LEVELS_PER_BYTE / Tetracoordinate.DEFAULT_MAX_LEVELS)
         this.irrational = irrational === undefined ? false : true
+        this.power = power === undefined ? 0 : power
 
         if (value === undefined) {
             console.log('debug create tcoord 0')
-            this.power = 0
             this.num_levels = 1
         }
         else if (typeof value === 'string' || value instanceof String) {
             console.log('debug create tcoord from quaternary str')
-            this.power = power
             this.num_levels = value.length
 
             let d_arr: Array<number> = []
             for (let i=0; i<value.length; i++) {
                 const c: string = value[i]
-                if (c === '.' && this.power === undefined) {
-                    this.power = (this.quad_order == TetracoordQuadOrder.HIGH_FIRST)
+                if (c === '.') {
+                    this.power += (this.quad_order === TetracoordQuadOrder.HIGH_FIRST)
                         ? -(value.length-1 - i)
                         : -i
                 }
@@ -126,21 +125,15 @@ export class Tetracoordinate {
         }
         else if (Array.isArray(value)) {
             console.log('debug create tcoord from int array')
-            this.power = power
             this.num_levels = value.length
             this.set_digits(value)
         }
         else {
             console.log('debug create tcoord from bytes')
-            this.power = power
             this.num_levels = num_levels === undefined 
                 ? value.byteLength * Tetracoordinate.LEVELS_PER_BYTE
                 : num_levels
             this.bytes = value
-        }
-
-        if (this.power === undefined) {
-            this.power = 0
         }
     }
 
@@ -253,14 +246,15 @@ export class Tetracoordinate {
             orientation = Orientation.DEFAULT
         }
 
-        // for each quad digit, calculate unit cartesian vector, and flip+scale by level power
+        // for each quad digit, calculate unit cartesian vector, and flip+scale by level power,
+        // from highest to lowest power
         let quads: Array<string> = this.get_quad_strs()
+        if (this.quad_order === TetracoordQuadOrder.LOW_FIRST) {
+            quads.reverse()
+        }
         let vectors: Array<Vector2D> = new Array(this.num_levels)
-        let level = (
-            this.quad_order === TetracoordQuadOrder.HIGH_FIRST ? this.num_levels-1 : 0
-        ) + this.power
+        let level = this.num_levels-1 + this.power
         let level_even: boolean = level % 2 == 0
-        let level_delta: number = this.quad_order === TetracoordQuadOrder.HIGH_FIRST ? -1 : 1
         for (let i=0; i<this.num_levels; i++) {
             const q: string = quads[i]
 
@@ -297,8 +291,11 @@ export class Tetracoordinate {
             // add component to vectors
             vectors[i] = v
 
-            level += level_delta
-            level_even = !level_even
+            level--
+            if (q === '0') {
+                // update flip for entering center cell only
+                level_even = !level_even
+            }
         }
 
         let vector: Vector2D = vectors.reduce((prev: Vector2D, curr: Vector2D) => {
@@ -387,14 +384,8 @@ export class Tetracoordinate {
 
         // remove leading/trailing zeros to match populated levels
         if (quads.length > this.num_levels) {
-            let start: number
             let count: number = quads.length-this.num_levels
-            if (this.quad_order === TetracoordQuadOrder.HIGH_FIRST) {
-                start = 0
-            }
-            else {
-                start = quads.length-1 - count
-            }
+            let start: number = (this.quad_order === TetracoordQuadOrder.HIGH_FIRST) ? 0 : quads.length - count
 
             quads.splice(start, count)
         }
