@@ -1,6 +1,6 @@
 {
   "name": "tetracoord-explorer",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Tetracoordinates engine, grapher, calculator, playground.",
   "main": "index.js",
   "scripts": {
