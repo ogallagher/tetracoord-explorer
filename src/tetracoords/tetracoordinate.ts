@@ -1,46 +1,26 @@
 /**
- * Tetracoordinates engine.
+ * 
  */
 
 // imports
 
-import { 
-    TRIG_PI,
-    TRIG_SIN_PI_OVER_6,
-    TRIG_COS_PI_OVER_6,
-    Vector2D, 
-    CartesianCoordinate 
+import {
+    TetracoordQuadOrder,
+    Orientation,
+} from './misc'
+
+import {
+    CartesianCoordinate,
+    Vector2D,
+    TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6
 } from './vector2d'
-
-// constants
-
-// types
-
-enum Orientation {
-    UP = 'up',
-    DOWN = 'dn',
-    LEFT = 'lf',
-    RIGHT = 'rt',
-    CUSTOM = '',
-
-    DEFAULT = UP
-}
-
-enum TetracoordQuadOrder {
-    HIGH_FIRST = 'h',
-    LOW_FIRST = 'l',
-
-    DEFAULT = HIGH_FIRST
-}
-
-// typescript types, interfaces
 
 // classes
 
 /**
  * Tetracoordinate point.
  */
-export class Tetracoordinate {
+ export class Tetracoordinate {
     static LEVELS_PER_BYTE: number = 4
     static DEFAULT_MAX_LEVELS: number = Tetracoordinate.LEVELS_PER_BYTE * 1
 
@@ -231,11 +211,20 @@ export class Tetracoordinate {
         return this
     }
 
+    set(other: Tetracoordinate) {
+        this.bytes = other.bytes
+        this.num_levels = other.num_levels
+        this.power = other.power
+        this.quad_order = other.quad_order
+        this.irrational = other.irrational
+    }
+
     /**
      * Get equivalent cartesian point.
-     * TODO fix flip logic
-     * TODO handle irrational
-     * TODO handle orientation!=DEFAULT
+     * 
+     * // TODO handle irrational
+     * 
+     * // TODO handle orientation!=DEFAULT
      * 
      * @param {Orientation} orientation
      * 
@@ -282,7 +271,7 @@ export class Tetracoordinate {
             
             // flip
             if (!level_even) {
-                v.rotate(TRIG_PI)
+                v.multiplyScalar(-1)
             }
 
             // scale
@@ -309,7 +298,7 @@ export class Tetracoordinate {
     }
 
     /**
-     * TODO handle irrationals
+     * // TODO handle irrationals
      * 
      * @param other {Tetracoordinate} Other tcoord for comparison.
      * 
@@ -354,8 +343,12 @@ export class Tetracoordinate {
     }
 
     negate_from_cartesian(): Tetracoordinate {
-        throw new Error('cartesian negate not yet implemented')
-        return this
+        let negative = Tetracoordinate.from_cartesian_coord(
+            Vector2D.fromObject(this.to_cartesian_coord()).multiplyScalar(-1)
+        )
+        this.set(negative)
+
+        return negative
     }
 
     add(other: Tetracoordinate): Tetracoordinate {
@@ -363,16 +356,23 @@ export class Tetracoordinate {
         return this
     }
 
+    /**
+     * 
+     * @param other Other tcoord to add.
+     * 
+     * @returns Self for method chaining.
+     */
     add_from_cartesian(other: Tetracoordinate): Tetracoordinate {
         let cthis = this.to_cartesian_coord()
         let cother = other.to_cartesian_coord()
 
-        Tetracoordinate.from_cartesian_coord(
-            {x: cthis.x + cother.x, y: cthis.y + cother.y}
+        let sum = Tetracoordinate.from_cartesian_coord(
+            {x: cthis.x + cother.x, y: cthis.y + cother.y},
+            Math.min(this.power, other.power)
         )
+        this.set(sum)
 
-        throw new Error('cartesian add not yet implemented')
-        return this
+        return sum
     }
 
     /**
@@ -518,8 +518,9 @@ export class Tetracoordinate {
             )
             */
 
+            // TODO improve threshold for comparing before/after step
             if (dist > prev_dist) {
-                console.log(`${dist} > ${prev_dist} --> quad=${0} -flip=${-flip}`)
+                console.log(`debug ${dist} > ${prev_dist} --> quad=${0} -flip=${-flip}`)
                 // undo step; stay in zero
                 loc = prev_loc
                 delta = prev_delta
@@ -531,7 +532,7 @@ export class Tetracoordinate {
                 flip = -flip
             }
             else {
-                console.log(`${dist} < ${prev_dist} --> quad=${quad} flip=${flip}`)
+                console.log(`debug ${dist} < ${prev_dist} --> quad=${quad} flip=${flip}`)
                 // add quad to number
                 quads.push(quad)
             }
@@ -577,58 +578,6 @@ Tetracoordinate.unit_to_cartesian.set(Tetracoordinate.ONE, {x: 0, y: 1})
 Tetracoordinate.unit_to_cartesian.set(Tetracoordinate.TWO, {x: -TRIG_COS_PI_OVER_6, y: -TRIG_SIN_PI_OVER_6})
 Tetracoordinate.unit_to_cartesian.set(Tetracoordinate.THREE, {x: TRIG_COS_PI_OVER_6, y: -TRIG_SIN_PI_OVER_6})
 
+// exports
 
-/**
- * Tetracoordinate space for tracking tetracoord points relative to an equivalent cartesian space.
- */
-export class TetracoordinateSpace {
-    /**
-     * Tetracoord space orientation/rotation relative to a cartesian space centered at 0 = (0,0).
-     */
-    orientation: Orientation
-
-    /**
-     * @param orientation {Orientation} Initial orientation.
-     */
-    constructor(orientation: Orientation=undefined) {
-        if (orientation === undefined) {
-            orientation = Orientation.DEFAULT
-        }
-
-        this.orientation = orientation
-    }
-
-    /**
-     * String representation of this tetracoord space instance.
-     */
-    toStringOverride(): string {
-        return `tetracoord space instance`
-    }
-}
-
-// TetracoordinateSpace overrides
-
-TetracoordinateSpace.prototype.toString = TetracoordinateSpace.prototype.toStringOverride
-
-/**
- * 
- */
-export default class TetracoordinateEngine {
-    tspace: TetracoordinateSpace
-
-    constructor(orientation: Orientation=undefined) {
-        this.tspace = new TetracoordinateSpace(orientation)
-    }
-
-    /**
-     * String representation of this tetracoord engine instance.
-     */
-    toStringOverride(): string {
-        return `tengine(\n  tspace=${this.tspace}\n)`
-    }
-}
-
-// TetracoordinateEngine overrides
-
-TetracoordinateEngine.prototype.toString = TetracoordinateEngine.prototype.toStringOverride
-
+export default Tetracoordinate

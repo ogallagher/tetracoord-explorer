@@ -5,3 +5,6 @@ local/
 node_modules/
 src/*.js
 src/*.js.map
+
+.next/
+next-env.d.ts

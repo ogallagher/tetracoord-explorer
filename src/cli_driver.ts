@@ -3,7 +3,7 @@
  */
 
 import templogger = require('temp_js_logger')
-import TetracoordinateEngine from './tetracoord_engine'
+import TetracoordEngine from './tetracoords/tetracoord_engine'
 
 function init(): Promise<any> {
     return Promise.all([
@@ -24,7 +24,7 @@ function init(): Promise<any> {
 
 function main() {
     console.log('info init tetracoord engine')
-    const tengine: TetracoordinateEngine = new TetracoordinateEngine()
+    const tengine: TetracoordEngine = new TetracoordEngine()
     console.log(`info ${tengine}`)
 }
 
