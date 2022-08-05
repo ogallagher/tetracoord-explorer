@@ -2,6 +2,17 @@
 
 */
 
+.canvas-parent {
+    width: 100%;
+    height: 1000px;
+    background-color: blue;
+}
+
 .explorer-canvas {
     background-color: black;
+    cursor: none;
+}
+.explorer-canvas[data-paper-resize="true"] {
+    width: 100%;
+    height: 100%;
 }

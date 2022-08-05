@@ -265,6 +265,9 @@ import {
                 case '3':
                     uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.THREE)
                     break
+                
+                default:
+                    console.log(`error invalid quad ${q}`)
             }
 
             let v = new Vector2D(uc.x, uc.y)
@@ -380,8 +383,8 @@ import {
      * according to internal quad order.
      */
     get_quad_strs(): Array<string> {
-        let quads = this.get_byte_strs().flat().join().split('')
-
+        let quads = this.get_byte_strs().flat().join('').split('')
+        
         // remove leading/trailing zeros to match populated levels
         if (quads.length > this.num_levels) {
             let count: number = quads.length-this.num_levels
@@ -520,7 +523,7 @@ import {
 
             // TODO improve threshold for comparing before/after step
             if (dist > prev_dist) {
-                console.log(`debug ${dist} > ${prev_dist} --> quad=${0} -flip=${-flip}`)
+                // console.log(`debug ${dist} > ${prev_dist} --> quad=${0} -flip=${-flip}`)
                 // undo step; stay in zero
                 loc = prev_loc
                 delta = prev_delta
@@ -532,7 +535,7 @@ import {
                 flip = -flip
             }
             else {
-                console.log(`debug ${dist} < ${prev_dist} --> quad=${quad} flip=${flip}`)
+                // console.log(`debug ${dist} < ${prev_dist} --> quad=${quad} flip=${flip}`)
                 // add quad to number
                 quads.push(quad)
             }
