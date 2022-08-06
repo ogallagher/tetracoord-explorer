@@ -10,4 +10,4 @@
 # compile static webpages
 # launch npm webserver
 # expose to external traffic
-web: npm ci && npm run build && npm run start
+web: npm ci --include=dev && npm run build && npm run start
