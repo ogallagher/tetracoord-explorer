@@ -20,6 +20,12 @@ export const TRIG_COS_PI_OVER_3 = TRIG_SIN_PI_OVER_6
 
 // types
 
+export enum RotationDirection {
+    COUNTER = 1,
+    CLOCK = -1,
+    DEFAULT = COUNTER
+}
+
 // typescript types, interfaces
 
 export interface CartesianCoordinate {

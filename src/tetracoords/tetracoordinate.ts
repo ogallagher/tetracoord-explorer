@@ -15,6 +15,10 @@ import {
     TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6
 } from './vector2d'
 
+// ts types interfaces
+
+export type Quads = Array<number>|string
+
 // classes
 
 /**
@@ -24,6 +28,7 @@ import {
     static LEVELS_PER_BYTE: number = 4
     static DEFAULT_MAX_LEVELS: number = Tetracoordinate.LEVELS_PER_BYTE * 1
 
+    // unit tcoords
     static ZERO: Tetracoordinate = new Tetracoordinate('0', 0)
     static ONE: Tetracoordinate = new Tetracoordinate('1', 0)
     static TWO: Tetracoordinate = new Tetracoordinate('2', 0)
@@ -435,7 +440,7 @@ import {
      * @returns Equivalent tcoord.
      */
     static from_cartesian_coord(
-        ccoord: CartesianCoordinate, 
+        ccoord: CartesianCoordinate|Vector2D, 
         precision: number=undefined,
         quad_order: TetracoordQuadOrder=undefined,
         orientation: Orientation=undefined
@@ -446,7 +451,7 @@ import {
         precision = (precision === undefined) ? 0 : Math.trunc(precision)
         const min_dist = Math.pow(2, precision) / 2
 
-        let target: Vector2D = Vector2D.fromObject(ccoord)
+        let target: Vector2D = ccoord instanceof Vector2D ? ccoord : Vector2D.fromObject(ccoord)
         let loc: Vector2D = new Vector2D(0, 0)
         let delta: Vector2D = Vector2D.subtract(target, loc)
         let dist: number = delta.magnitude()
@@ -454,6 +459,7 @@ import {
 
         // min safe level needed to reach the target
         let scale: number = Math.ceil(Math.log2(delta.magnitude()))
+        if (scale < 0) scale = 0
         let power: number = scale
         let flip = (power % 2 != 0) ? -1 : 1
 
@@ -547,6 +553,9 @@ import {
         if (fill.length > 0) {
             fill.fill(0)
             quads = quads.concat(fill)
+        }
+        else if (quads.length == 0) {
+            quads.push(0)
         }
 
         // convert raw quads to tcoord; apply power

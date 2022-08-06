@@ -5,9 +5,15 @@
 import React, { useEffect, createRef } from "react"
 import paperjs = require("paper")
 import { 
+    Orientation,
     Tetracoordinate, 
     TRIG_PI_OVER_6 
 } from "../src/tetracoords"
+import {
+    TetracoordSpace,
+    TetracoordCell
+} from "../src/tetracoords"
+import Vector2D, { RotationDirection } from "../src/tetracoords/vector2d"
 
 const UNIT_PX = 30
 const RADIUS_PX = UNIT_PX * 0.5
@@ -21,44 +27,48 @@ function ExplorerCanvas() {
         paper.activate()
         console.log(paper.view)
 
-        let grid_cell_up_path = new paperjs.Path([
-            new paperjs.Point(0, -UNIT_PX),
-            new paperjs.Point(Math.cos(-TRIG_PI_OVER_6*7)*UNIT_PX, Math.sin(-TRIG_PI_OVER_6*7)*UNIT_PX),
-            new paperjs.Point(Math.cos(-TRIG_PI_OVER_6*11)*UNIT_PX, Math.sin(-TRIG_PI_OVER_6*11)*UNIT_PX)
-        ])
-        let grid_cell_up = new paper.SymbolDefinition(grid_cell_up_path)
-        grid_cell_up_path.closePath()
-        grid_cell_up_path.strokeColor = new paperjs.Color('blue')
+        const tspace = new TetracoordSpace(
+            Orientation.UP, 
+            UNIT_PX,
+            paper.view.bounds.center,
+            RotationDirection.COUNTER
+        )
+        const unit_cell_dn = tspace.tcoord_to_cell(Tetracoordinate.ZERO)
+        const unit_cell_up = tspace.tcoord_to_cell(Tetracoordinate.ONE)
 
-        let grid_cell_dn = new paper.SymbolDefinition(grid_cell_up.item.clone())
-        grid_cell_dn.item.rotate(180, new paperjs.Point(0, 0.25))
+        const sym_cell_dn_path = new paperjs.Path(
+            unit_cell_dn.get_points_scaled()
+            .map((point: Vector2D) => {
+                return new paperjs.Point(point)
+            })
+        )
+        sym_cell_dn_path.closePath()
+        sym_cell_dn_path.strokeColor = new paperjs.Color('blue')
+        console.log(unit_cell_dn)
+        console.log(sym_cell_dn_path)
+
+        const sym_cell_up_path = new paperjs.Path(
+            unit_cell_up.get_points_scaled()
+            .map((point: Vector2D) => {
+                return new paperjs.Point(point)
+            })
+        )
+        sym_cell_up_path.closePath()
+        sym_cell_up_path.strokeColor = new paperjs.Color('blue')
         
-        for (let i=0; i<Math.pow(4, 4); i++) {
+        let sym_cell_dn = new paper.SymbolDefinition(sym_cell_dn_path)
+        let sym_cell_up = new paper.SymbolDefinition(sym_cell_up_path)
+        
+        let tspace_levels = 4
+        for (let i=0; i<Math.pow(4, tspace_levels); i++) {
             let qs = i.toString(4)
-            let flip = true
-            for (let q of qs) {
-                if (Number.parseInt(q) != 0) {
-                    flip = !flip
-                }
-            }
-
             let tc = new Tetracoordinate(qs)
 
-            if (flip) {
-                grid_cell_up.place(
-                    new paperjs.Point(tc.to_cartesian_coord())
-                    .add(new paperjs.Point(0, -0.25))
-                    .multiply(UNIT_PX)
-                    .add(paper.view.bounds.center)
-                )
+            if (TetracoordCell.tcoord_cell_flip(qs)) {
+                sym_cell_up.place(new paperjs.Point(tspace.tcoord_to_centroid(tc)))
             }
             else {
-                grid_cell_dn.place(
-                    new paperjs.Point(tc.to_cartesian_coord())
-                    .add(new paperjs.Point(0, 0.25))
-                    .multiply(UNIT_PX)
-                    .add(paper.view.bounds.center)
-                )
+                sym_cell_dn.place(new paperjs.Point(tspace.tcoord_to_centroid(tc)))
             }
         }
 
@@ -73,12 +83,12 @@ function ExplorerCanvas() {
         let cursor = new paperjs.CompoundPath({
             children: [
                 new paperjs.Path.Line(
-                    new paperjs.Point(-0.5*UNIT_PX,0),
-                    new paperjs.Point(0.5*UNIT_PX,0)
+                    new paperjs.Point(-0.5*RADIUS_PX,0),
+                    new paperjs.Point(0.5*RADIUS_PX,0)
                 ),
                 new paperjs.Path.Line(
-                    new paperjs.Point(0,-0.5*UNIT_PX),
-                    new paperjs.Point(0,0.5*UNIT_PX)
+                    new paperjs.Point(0,-0.5*RADIUS_PX),
+                    new paperjs.Point(0,0.5*RADIUS_PX)
                 )
             ]
         })
@@ -90,15 +100,19 @@ function ExplorerCanvas() {
         
         paper.view.onMouseMove = function(mouse: paper.MouseEvent) {
             cursor.position.set(mouse.point.x, mouse.point.y)
+
+            let tcell = tspace.ccoord_to_cell(mouse.point)
+            console.log(`c=${tcell.ccoord.toString()} t=${tcell.tcoord.toString()}`)
+
+            let pos = new paper.Point(
+                tcell.get_bounds_center_transformed()
+            )
+            // let pos = new paper.Point(tcoord.to_cartesian_coord()).multiply(UNIT_PX).add(paper.view.bounds.center)
+            cursor_cell.position.set(pos)
         }
 
         paper.view.onMouseUp = function(mouse: paper.MouseEvent) {
-            let ccoord = mouse.point.subtract(paper.view.bounds.center).divide(UNIT_PX)
-            let tcoord = Tetracoordinate.from_cartesian_coord(ccoord)
-            console.log(`c=${ccoord.toString()} t=${tcoord.toString()}`)
-
-            let pos = new paper.Point(tcoord.to_cartesian_coord()).multiply(UNIT_PX).add(paper.view.bounds.center)
-            cursor_cell.position.set(pos)
+            
         }
     }, [ canvas_ref ])
     
