@@ -3,7 +3,7 @@
  */
 
 import React from "react"
-import paperjs = require("paper")
+import paperjs from "paper"
 import { 
     Orientation,
     Tetracoordinate, 
