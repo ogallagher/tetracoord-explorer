@@ -35,7 +35,6 @@
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",
     "@types/victor": "^1.1.0",
-    "temp_js_logger": "^0.6.0",
     "typescript": "^4.7.4"
   },
   "dependencies": {
@@ -45,6 +44,8 @@
     "paper": "^0.12.15",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "save-optional": "^1.0.0",
+    "temp_js_logger": "^0.7.1",
     "victor": "^1.1.0"
   }
 }

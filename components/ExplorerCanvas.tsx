@@ -43,9 +43,7 @@ function ExplorerCanvas() {
             })
         )
         sym_cell_dn_path.closePath()
-        sym_cell_dn_path.strokeColor = new paperjs.Color('blue')
-        console.log(unit_cell_dn)
-        console.log(sym_cell_dn_path)
+        sym_cell_dn_path.visible = false
 
         const sym_cell_up_path = new paperjs.Path(
             unit_cell_up.get_points_scaled()
@@ -54,22 +52,28 @@ function ExplorerCanvas() {
             })
         )
         sym_cell_up_path.closePath()
-        sym_cell_up_path.strokeColor = new paperjs.Color('blue')
-        
-        let sym_cell_dn = new paper.SymbolDefinition(sym_cell_dn_path)
-        let sym_cell_up = new paper.SymbolDefinition(sym_cell_up_path)
+        sym_cell_up_path.visible = false
         
         let tspace_levels = 4
         for (let i=0; i<Math.pow(4, tspace_levels); i++) {
             let qs = i.toString(4)
             let tc = new Tetracoordinate(qs)
 
-            if (TetracoordCell.tcoord_cell_flip(qs)) {
-                sym_cell_up.place(new paperjs.Point(tspace.tcoord_to_centroid(tc)))
-            }
-            else {
-                sym_cell_dn.place(new paperjs.Point(tspace.tcoord_to_centroid(tc)))
-            }
+            let cell: paper.Path = (
+                TetracoordCell.tcoord_cell_flip(qs) ? sym_cell_up_path.clone() : sym_cell_dn_path.clone()
+            )
+            cell.position = new paperjs.Point(tspace.tcoord_to_centroid(tc))
+            cell.visible = true
+            cell.strokeWidth = 1
+            cell.strokeColor = new paperjs.Color('white')
+
+            let level = qs.length
+            cell.fillColor = new paperjs.Color(
+                (level % 3) / 2, 
+                ((3*level+1) % 4) / 3, 
+                ((2*level+2) % 5) / 4, 
+                0.25
+            )
         }
 
         let cursor_cell = new paperjs.Path.Circle(
@@ -77,8 +81,8 @@ function ExplorerCanvas() {
             RADIUS_PX
         )
         cursor_cell.closePath()
-        cursor_cell.strokeColor = new paperjs.Color('transparent')
-        cursor_cell.fillColor = new paperjs.Color('green')
+        cursor_cell.strokeWidth = 0
+        cursor_cell.fillColor = new paperjs.Color('white')
 
         let cursor = new paperjs.CompoundPath({
             children: [
@@ -109,10 +113,6 @@ function ExplorerCanvas() {
             )
             // let pos = new paper.Point(tcoord.to_cartesian_coord()).multiply(UNIT_PX).add(paper.view.bounds.center)
             cursor_cell.position.set(pos)
-        }
-
-        paper.view.onMouseUp = function(mouse: paper.MouseEvent) {
-            
         }
     }, [ canvas_ref ])
     
