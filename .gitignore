@@ -8,3 +8,5 @@ src/*.js.map
 
 .next/
 next-env.d.ts
+
+Procfile
