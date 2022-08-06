@@ -2,26 +2,29 @@
  * 
  */
 
-import React, { useEffect, createRef } from "react"
+import React from "react"
 import paperjs = require("paper")
 import { 
     Orientation,
     Tetracoordinate, 
-    TRIG_PI_OVER_6 
-} from "../src/tetracoords"
-import {
+    TRIG_PI_OVER_6,
+    Vector2D,
+    RotationDirection,
     TetracoordSpace,
     TetracoordCell
 } from "../src/tetracoords"
-import Vector2D, { RotationDirection } from "../src/tetracoords/vector2d"
+
+interface ExplorerCanvasProps {
+    set_cursor_tcoord: React.Dispatch<Tetracoordinate>
+}
 
 const UNIT_PX = 30
 const RADIUS_PX = UNIT_PX * 0.5
 
-function ExplorerCanvas() {
-    const canvas_ref: React.RefObject<HTMLCanvasElement> = createRef()
+function ExplorerCanvas(props: ExplorerCanvasProps) {
+    const canvas_ref: React.RefObject<HTMLCanvasElement> = React.createRef()
 
-    useEffect(() => {
+    React.useEffect(() => {
         const paper = new paperjs.PaperScope()
         paper.setup(canvas_ref.current)
         paper.activate()
@@ -108,13 +111,15 @@ function ExplorerCanvas() {
             let tcell = tspace.ccoord_to_cell(mouse.point)
             console.log(`c=${tcell.ccoord.toString()} t=${tcell.tcoord.toString()}`)
 
+            props.set_cursor_tcoord(tcell.tcoord)
+
             let pos = new paper.Point(
                 tcell.get_bounds_center_transformed()
             )
             // let pos = new paper.Point(tcoord.to_cartesian_coord()).multiply(UNIT_PX).add(paper.view.bounds.center)
             cursor_cell.position.set(pos)
         }
-    }, [ canvas_ref ])
+    }, [])
     
     return (
         <div className="canvas-parent">
