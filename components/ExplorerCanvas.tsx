@@ -35,8 +35,15 @@ function ExplorerCanvas() {
         
         for (let i=0; i<Math.pow(4, 4); i++) {
             let qs = i.toString(4)
-            let flip = (Math.floor(Math.log(i)/Math.log(4)) % 2 == 0) ? (i % 4 == 0) : (i % 4 != 0)
+            let flip = true
+            for (let q of qs) {
+                if (Number.parseInt(q) != 0) {
+                    flip = !flip
+                }
+            }
+
             let tc = new Tetracoordinate(qs)
+
             if (flip) {
                 grid_cell_up.place(
                     new paperjs.Point(tc.to_cartesian_coord())
