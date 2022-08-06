@@ -4,12 +4,12 @@
 
 // imports
 
-import React = require("react")
+import React from "react"
 import ExplorerCanvas from "../components/ExplorerCanvas"
 import Header from "../components/Header"
 import TetracoordDisplay from "../components/TetracoordDisplay"
 
-import strings = require("../public/strings.json")
+import * as strings from "../public/strings.json"
 
 import { Tetracoordinate } from "../src/tetracoords"
 

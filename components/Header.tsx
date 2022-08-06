@@ -4,7 +4,7 @@
 
 // imports
 
-import React = require("react")
+import React from "react"
 
 function Header({ title }) {
     return (

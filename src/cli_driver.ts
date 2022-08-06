@@ -2,7 +2,7 @@
  * Tetracoord engine cli driver.
  */
 
-import templogger = require('temp_js_logger')
+import templogger from 'temp_js_logger'
 import TetracoordEngine from './tetracoords/tetracoord_engine'
 
 function init(): Promise<any> {

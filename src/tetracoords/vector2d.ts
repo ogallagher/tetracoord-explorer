@@ -4,7 +4,7 @@
 
 // imports
 
-import Victor = require('victor')
+import Victor from 'victor'
 
 // constants
 

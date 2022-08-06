@@ -156,10 +156,10 @@ export class TetracoordCell {
      * @param orientation {Orientation} Initial orientation.
      */
     constructor(
-        orientation: Orientation=undefined, 
-        scale: number=undefined, 
-        origin: Vector2D|CartesianCoordinate,
-        rotation_direction: RotationDirection
+        orientation?: Orientation, 
+        scale?: number, 
+        origin?: Vector2D|CartesianCoordinate,
+        rotation_direction?: RotationDirection
     ) {
         orientation === undefined ? orientation = Orientation.DEFAULT : orientation
         scale === undefined ? 1 : scale
