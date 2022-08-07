@@ -3,8 +3,9 @@ local/
 **/.DS_Store
 
 node_modules/
-src/*.js
-src/*.js.map
+src/**/*.js
+src/**/*.js.map
+tsconfig.tsbuildinfo
 
 .next/
 next-env.d.ts

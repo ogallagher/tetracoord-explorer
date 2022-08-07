@@ -6,10 +6,8 @@ import React from "react"
 import paperjs from "paper"
 import { 
     Orientation,
-    Tetracoordinate, 
-    TRIG_PI_OVER_6,
+    Tetracoordinate,
     Vector2D,
-    RotationDirection,
     TetracoordSpace,
     TetracoordCell
 } from "../src/tetracoords"
@@ -31,31 +29,30 @@ function ExplorerCanvas(props: ExplorerCanvasProps) {
         console.log(paper.view)
 
         const tspace = new TetracoordSpace(
-            Orientation.UP, 
+            Orientation.UP,
             UNIT_PX,
-            paper.view.bounds.center,
-            RotationDirection.COUNTER
+            paper.view.bounds.center
         )
-        const unit_cell_dn = tspace.tcoord_to_cell(Tetracoordinate.ZERO)
-        const unit_cell_up = tspace.tcoord_to_cell(Tetracoordinate.ONE)
 
-        const sym_cell_dn_path = new paperjs.Path(
-            unit_cell_dn.get_points_scaled()
+        const unit_cell_dn_path = new paperjs.Path(
+            tspace.tcoord_to_cell(Tetracoordinate.ZERO)
+            .get_points_scaled()
             .map((point: Vector2D) => {
                 return new paperjs.Point(point)
             })
         )
-        sym_cell_dn_path.closePath()
-        sym_cell_dn_path.visible = false
+        unit_cell_dn_path.closePath()
+        unit_cell_dn_path.visible = false
 
-        const sym_cell_up_path = new paperjs.Path(
-            unit_cell_up.get_points_scaled()
+        const unit_cell_up_path = new paperjs.Path(
+            tspace.tcoord_to_cell(Tetracoordinate.ONE)
+            .get_points_scaled()
             .map((point: Vector2D) => {
                 return new paperjs.Point(point)
             })
         )
-        sym_cell_up_path.closePath()
-        sym_cell_up_path.visible = false
+        unit_cell_up_path.closePath()
+        unit_cell_up_path.visible = false
         
         let tspace_levels = 4
         for (let i=0; i<Math.pow(4, tspace_levels); i++) {
@@ -63,7 +60,7 @@ function ExplorerCanvas(props: ExplorerCanvasProps) {
             let tc = new Tetracoordinate(qs)
 
             let cell: paper.Path = (
-                TetracoordCell.tcoord_cell_flip(qs) ? sym_cell_up_path.clone() : sym_cell_dn_path.clone()
+                TetracoordCell.tcoord_cell_flip(qs) ? unit_cell_up_path.clone() : unit_cell_dn_path.clone()
             )
             cell.position = new paperjs.Point(tspace.tcoord_to_centroid(tc))
             cell.visible = true
@@ -107,7 +104,9 @@ function ExplorerCanvas(props: ExplorerCanvasProps) {
         
         paper.view.onMouseMove = function(mouse: paper.MouseEvent) {
             cursor.position.set(mouse.point.x, mouse.point.y)
+        }
 
+        paper.view.onMouseUp = function(mouse: paper.MouseEvent) {
             let tcell = tspace.ccoord_to_cell(mouse.point)
             console.log(`c=${tcell.ccoord.toString()} t=${tcell.tcoord.toString()}`)
 
@@ -116,7 +115,6 @@ function ExplorerCanvas(props: ExplorerCanvasProps) {
             let pos = new paper.Point(
                 tcell.get_bounds_center_transformed()
             )
-            // let pos = new paper.Point(tcoord.to_cartesian_coord()).multiply(UNIT_PX).add(paper.view.bounds.center)
             cursor_cell.position.set(pos)
         }
     }, [])

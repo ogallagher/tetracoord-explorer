@@ -30,22 +30,20 @@ export class TetracoordCell {
     space: TetracoordSpace
 
     constructor(tcoord: Tetracoordinate, space: TetracoordSpace) {
-        let rd = space.rotation_direction
-
         this.tcoord = tcoord
         this.ccoord = Vector2D.fromObject(tcoord.to_cartesian_coord(space.orientation))
         this.flip = TetracoordCell.tcoord_cell_flip(tcoord)
         
-        this.anchor = TCOORD_CELL_ANCHOR_OFFSET.clone().multiplyScalar(rd)
+        this.anchor = TCOORD_CELL_ANCHOR_OFFSET.clone()
         
         this.points = [
-            new Vector2D(0, rd),
-            new Vector2D(Math.cos(TRIG_PI_OVER_6*7*rd), Math.sin(TRIG_PI_OVER_6*7*rd)),
-            new Vector2D(Math.cos(TRIG_PI_OVER_6*11*rd), Math.sin(TRIG_PI_OVER_6*11*rd))
+            new Vector2D(Math.cos(TRIG_PI_OVER_6*3), Math.sin(TRIG_PI_OVER_6*3)),
+            new Vector2D(Math.cos(TRIG_PI_OVER_6*7), Math.sin(TRIG_PI_OVER_6*7)),
+            new Vector2D(Math.cos(TRIG_PI_OVER_6*11), Math.sin(TRIG_PI_OVER_6*11))
         ]
 
         if (!this.flip) {
-            this.anchor.multiplyScalar(-1)
+            this.anchor.multiplyScalarY(-1)
             this.points = this.points.map((vector) => {
                 return vector.multiplyScalarY(-1)
             })
@@ -67,7 +65,11 @@ export class TetracoordCell {
     }
 
     get_bounds_center_transformed(): Vector2D {
-        return this.ccoord.clone().multiplyScalar(this.space.scale).add(this.space.origin)
+        return (
+            this.ccoord.clone()
+            .multiplyScalar(this.space.scale)
+            .add(this.space.origin)
+        )
     }
 
     /**
@@ -146,11 +148,6 @@ export class TetracoordCell {
      * Tetracoord space origin relative to cartesian space (offset from display origin).
      */
     origin: Vector2D
-    /**
-     * Direction of rotation, relative to the Y AXIS of the cartesian space (counter is toward positive y,
-     * clock is toward negative y).
-     */
-    rotation_direction: RotationDirection
 
     /**
      * @param orientation {Orientation} Initial orientation.
@@ -158,16 +155,13 @@ export class TetracoordCell {
     constructor(
         orientation?: Orientation, 
         scale?: number, 
-        origin?: Vector2D|CartesianCoordinate,
-        rotation_direction?: RotationDirection
+        origin?: Vector2D|CartesianCoordinate
     ) {
         orientation === undefined ? orientation = Orientation.DEFAULT : orientation
         scale === undefined ? 1 : scale
-        rotation_direction === undefined ? RotationDirection.DEFAULT : rotation_direction
 
         this.orientation = orientation
         this.scale = scale
-        this.rotation_direction = rotation_direction
         if (origin instanceof Vector2D) {
             this.origin = origin
         }
@@ -180,8 +174,14 @@ export class TetracoordCell {
      * String representation of this tetracoord space instance.
      */
     toStringOverride(): string {
-        return `tetracoord space instance`
+        return (
+            `tspace(` +
+            `scale=${this.scale} origin=${this.origin} ` +
+            `orientation=${this.orientation}` +
+            `)`
+        )
     }
+
     /**
      * 
      * @param tcoord 
@@ -198,7 +198,7 @@ export class TetracoordCell {
      */
     ccoord_to_cell(ccoord: CartesianCoordinate): TetracoordCell {
         let vector = Vector2D.fromObject(ccoord)
-        // .add(TCOORD_CELL_ANCHOR_OFFSET.clone().multiplyScalar(this.rotation_direction))
+        // .add(TCOORD_CELL_ANCHOR_OFFSET)
         .subtract(this.origin)
         .divideScalar(this.scale)
 
@@ -219,7 +219,7 @@ export class TetracoordCell {
             Vector2D.fromObject(tcoord.to_cartesian_coord())
             .add(
                 TCOORD_CELL_ANCHOR_OFFSET.clone()
-                .multiplyScalarY(flip ? -this.rotation_direction : this.rotation_direction)
+                .multiplyScalarY(flip ? -1 : 1)
             )
             .multiplyScalar(this.scale)
             .add(this.origin)

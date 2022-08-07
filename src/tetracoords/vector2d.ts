@@ -20,6 +20,9 @@ export const TRIG_COS_PI_OVER_3 = TRIG_SIN_PI_OVER_6
 
 // types
 
+/**
+ * @deprecated
+ */
 export enum RotationDirection {
     COUNTER = 1,
     CLOCK = -1,
