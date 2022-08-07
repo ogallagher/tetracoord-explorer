@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
     locales: [
       'en-US', 'sp'
     ]
+  },
+  typescript: {
+    tsconfigPath: './tsconfig.json'
   }
 }
 

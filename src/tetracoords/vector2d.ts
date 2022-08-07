@@ -4,7 +4,7 @@
 
 // imports
 
-import Victor from 'victor'
+import Victor from '@a-robu/victor'
 
 // constants
 
@@ -48,6 +48,7 @@ export class Vector2D extends Victor {
     }
 
     static add(a: Vector2D, b: Vector2D) {
+
         return new Vector2D(
             a.x + b.x,
             a.y + b.y

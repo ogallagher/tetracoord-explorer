@@ -17,7 +17,9 @@ import {
 
 // ts types interfaces
 
-export type Quads = Array<number>|string
+export type Quads = number[]|string
+export type imaginary = null
+export type TetracoordBytes = Uint8Array|imaginary
 
 // classes
 
@@ -30,6 +32,8 @@ export type Quads = Array<number>|string
     static BITS_PER_BYTE: number = 8
     static LEVELS_PER_BYTE: number = Tetracoordinate.BITS_PER_BYTE / Tetracoordinate.BITS_PER_LEVEL
     static DEFAULT_MAX_LEVELS: number = Tetracoordinate.LEVELS_PER_BYTE * 1
+
+    static imaginary: imaginary = null
 
     // unit tcoords
     static ZERO: Tetracoordinate = new Tetracoordinate('0', 0)
@@ -50,7 +54,7 @@ export type Quads = Array<number>|string
      * Raw binary representation of this tcoord. Each tcoord digit/place value is represented with 2 bits.
      * Each byte represents up to 4 tcoord digits (8/2=4).
      */
-    bytes: Uint8Array
+    bytes: TetracoordBytes
     /**
      * Number of significant quad digits in this tcoord (can be less than num_bytes*4).
      */
@@ -226,10 +230,10 @@ export type Quads = Array<number>|string
                 }
                 // else, imaginary has no value representation
                 
-                this.bytes = null
+                this.bytes = Tetracoordinate.imaginary
             }
         }
-        if (byte_idx < this.bytes.byteLength) {
+        if (this.bytes !== Tetracoordinate.imaginary && byte_idx < this.bytes.byteLength) {
             // write last byte to bytes
             this.bytes.set([byte], byte_idx_ordered(byte_idx))
         }
@@ -249,8 +253,6 @@ export type Quads = Array<number>|string
      * Get equivalent cartesian point.
      * 
      * // TODO handle irrational
-     * 
-     * // TODO test orientation!=DEFAULT
      * 
      * @param {Orientation} orientation
      * 
@@ -472,6 +474,7 @@ export type Quads = Array<number>|string
     }
 
     /**
+     * Convert a cartesian coordinate to the closest corresponding tetracoordinate.
      * 
      * @param ccoord Cartesian coord to convert.
      * @param precision Precision determines min level for rounding to nearest tcoord.
@@ -624,13 +627,13 @@ export type Quads = Array<number>|string
                     case Orientation.LEFT:
                         switch (i) {
                             case 1:
-                                i = 4
+                                i = -4
                                 break
                             case 2:
-                                i = -3
+                                i = 3
                                 break
                             case 3:
-                                i = 2
+                                i = -2
                                 break
                         }
                         break
@@ -652,13 +655,13 @@ export type Quads = Array<number>|string
                     case Orientation.RIGHT:
                         switch (i) {
                             case 1:
-                                i = -4
+                                i = 4
                                 break
                             case 2:
-                                i = 3
+                                i = -3
                                 break
                             case 3:
-                                i = -2
+                                i = 2
                                 break
                         }
                         break

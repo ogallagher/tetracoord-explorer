@@ -13,6 +13,7 @@ import {
 } from "../src/tetracoords"
 
 interface ExplorerCanvasProps {
+    flip_y: boolean
     set_cursor_tcoord: React.Dispatch<Tetracoordinate>
 }
 
@@ -33,10 +34,11 @@ function ExplorerCanvas(props: ExplorerCanvasProps) {
             UNIT_PX,
             paper.view.bounds.center
         )
+        const flip_y = props.flip_y
 
-        const unit_cell_dn_path = new paperjs.Path(
+        let unit_cell_dn_path = new paperjs.Path(
             tspace.tcoord_to_cell(Tetracoordinate.ZERO)
-            .get_points_scaled()
+            .get_points_scaled_oriented()
             .map((point: Vector2D) => {
                 return new paperjs.Point(point)
             })
@@ -44,25 +46,35 @@ function ExplorerCanvas(props: ExplorerCanvasProps) {
         unit_cell_dn_path.closePath()
         unit_cell_dn_path.visible = false
 
-        const unit_cell_up_path = new paperjs.Path(
+        let unit_cell_up_path = new paperjs.Path(
             tspace.tcoord_to_cell(Tetracoordinate.ONE)
-            .get_points_scaled()
+            .get_points_scaled_oriented()
             .map((point: Vector2D) => {
                 return new paperjs.Point(point)
             })
         )
         unit_cell_up_path.closePath()
         unit_cell_up_path.visible = false
+
+        if (flip_y) {
+            let temp = unit_cell_up_path
+            unit_cell_up_path = unit_cell_dn_path
+            unit_cell_dn_path = temp
+        }
         
         let tspace_levels = 4
         for (let i=0; i<Math.pow(4, tspace_levels); i++) {
             let qs = i.toString(4)
             let tc = new Tetracoordinate(qs)
 
+            let flip = TetracoordCell.tcoord_cell_flip(qs)
             let cell: paper.Path = (
-                TetracoordCell.tcoord_cell_flip(qs) ? unit_cell_up_path.clone() : unit_cell_dn_path.clone()
+                flip ? unit_cell_up_path.clone() : unit_cell_dn_path.clone()
             )
             cell.position = new paperjs.Point(tspace.tcoord_to_centroid(tc))
+            if (flip_y) {
+                cell.position.y = paper.view.bounds.height - cell.position.y
+            }
             cell.visible = true
             cell.strokeWidth = 1
             cell.strokeColor = new paperjs.Color('white')
@@ -107,14 +119,20 @@ function ExplorerCanvas(props: ExplorerCanvasProps) {
         }
 
         paper.view.onMouseUp = function(mouse: paper.MouseEvent) {
-            let tcell = tspace.ccoord_to_cell(mouse.point)
-            console.log(`c=${tcell.ccoord.toString()} t=${tcell.tcoord.toString()}`)
+            let m = mouse.point
+            if (flip_y) {
+                m.y = paper.view.bounds.height - m.y
+            }
+            let tcell = tspace.ccoord_to_cell(m)
 
             props.set_cursor_tcoord(tcell.tcoord)
 
             let pos = new paper.Point(
                 tcell.get_bounds_center_transformed()
             )
+            if (flip_y) {
+                pos.y = paper.view.bounds.height - pos.y
+            }
             cursor_cell.position.set(pos)
         }
     }, [])

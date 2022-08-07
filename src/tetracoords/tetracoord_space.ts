@@ -11,7 +11,9 @@ import {
     Quads,
     Tetracoordinate
 } from './tetracoordinate'
-import Vector2D, { CartesianCoordinate, RotationDirection, TRIG_PI_OVER_6 } from './vector2d'
+import Vector2D, { 
+    CartesianCoordinate, TRIG_PI_OVER_2, TRIG_PI_OVER_6, TRIG_PI
+} from './vector2d'
 
 // constants
 
@@ -31,7 +33,7 @@ export class TetracoordCell {
 
     constructor(tcoord: Tetracoordinate, space: TetracoordSpace) {
         this.tcoord = tcoord
-        this.ccoord = Vector2D.fromObject(tcoord.to_cartesian_coord(space.orientation))
+        this.ccoord = Vector2D.fromObject(tcoord.to_cartesian_coord())
         this.flip = TetracoordCell.tcoord_cell_flip(tcoord)
         
         this.anchor = TCOORD_CELL_ANCHOR_OFFSET.clone()
@@ -66,35 +68,34 @@ export class TetracoordCell {
 
     get_bounds_center_transformed(): Vector2D {
         return (
-            this.ccoord.clone()
+            this.space.orient_point(this.ccoord)
             .multiplyScalar(this.space.scale)
             .add(this.space.origin)
         )
     }
 
     /**
-     * @returns Set of points scaled according to parent tspace scale.
+     * @returns Set of points scaled and oriented according to parent tspace scale.
      */
-    get_points_scaled(): Array<Vector2D> {
+    get_points_scaled_oriented(): Array<Vector2D> {
         return this.points.map((vector) => {
             return (
-                vector.clone()
-                .add(this.anchor)
+                this.space.orient_point(vector)
+                .add(this.space.orient_point(this.anchor))
                 .multiplyScalar(this.space.scale)
             )
         })
     }
 
     /**
-     * // TODO rotate according to orientation.
      * 
      * @returns Set of points transformed according to the tcell position and parent tspace.
      */
     get_points_transformed(): Array<Vector2D> {
-        return this.points.map((vector) => {
+        return this.points.map((vector) => {            
             return (
-                vector.clone()
-                .add(this.anchor)
+                this.space.orient_point(vector)
+                .add(this.space.orient_point(this.anchor))
                 .multiplyScalar(this.space.scale)
                 .add(this.space.origin)
             )
@@ -159,6 +160,7 @@ export class TetracoordCell {
     ) {
         orientation === undefined ? orientation = Orientation.DEFAULT : orientation
         scale === undefined ? 1 : scale
+        origin === undefined ? new Vector2D(0,0) : origin
 
         this.orientation = orientation
         this.scale = scale
@@ -166,7 +168,7 @@ export class TetracoordCell {
             this.origin = origin
         }
         else {
-            this.origin = Vector2D.fromObject(origin)
+            this.origin = origin instanceof Vector2D ? origin : Vector2D.fromObject(origin)
         }
     }
 
@@ -202,28 +204,84 @@ export class TetracoordCell {
         .subtract(this.origin)
         .divideScalar(this.scale)
 
-        let tcoord = Tetracoordinate.from_cartesian_coord(vector)
+        let tcoord = Tetracoordinate.from_cartesian_coord(this.deorient_point(vector))
 
         return this.tcoord_to_cell(tcoord)
     }
 
     /**
-     * // TODO handle orientation
+     * 
      * @param tcoord 
      * @returns Transformed cartesian centroid.
      */
     tcoord_to_centroid(tcoord: Tetracoordinate): Vector2D {
         let flip = TetracoordCell.tcoord_cell_flip(tcoord)
 
-        return (
-            Vector2D.fromObject(tcoord.to_cartesian_coord())
-            .add(
-                TCOORD_CELL_ANCHOR_OFFSET.clone()
-                .multiplyScalarY(flip ? -1 : 1)
-            )
-            .multiplyScalar(this.scale)
-            .add(this.origin)
+        let centroid = Vector2D.fromObject(tcoord.to_cartesian_coord())
+        .add(
+            TCOORD_CELL_ANCHOR_OFFSET.clone()
+            .multiplyScalarY(flip ? -1 : 1)
         )
+
+        return this.orient_point(centroid)
+        .multiplyScalar(this.scale)
+        .add(this.origin)
+    }
+
+    /**
+     * Rotate point according to tspace orientation.
+     * 
+     * @param point Point without translation to tspace origin.
+     * 
+     * @returns Oriented point.
+     */
+    orient_point(point: Vector2D): Vector2D {
+        let op = point.clone()
+
+        switch (this.orientation) {
+            case Orientation.LEFT:
+                op.rotate(TRIG_PI_OVER_2)
+                break
+
+            case Orientation.DOWN:
+                op.rotate(TRIG_PI)
+                break
+
+            case Orientation.RIGHT:
+                op.rotate(3*TRIG_PI_OVER_2)
+                break
+            
+            // else don't rotate
+        }
+
+        return op
+    }
+
+    /**
+     * 
+     * @param point Point without translation to tspace origin, but still oriented.
+     * @returns  Deoriented point.
+     */
+    deorient_point(point: Vector2D): Vector2D {
+        let dp = point.clone()
+
+        switch (this.orientation) {
+            case Orientation.LEFT:
+                dp.rotate(-TRIG_PI_OVER_2)
+                break
+
+            case Orientation.DOWN:
+                dp.rotate(-TRIG_PI)
+                break
+
+            case Orientation.RIGHT:
+                dp.rotate(-3*TRIG_PI_OVER_2)
+                break
+            
+            // else don't rotate
+        }
+
+        return dp
     }
 }
 
