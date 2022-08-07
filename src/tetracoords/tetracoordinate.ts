@@ -17,7 +17,9 @@ import {
 
 // ts types interfaces
 
-export type Quads = Array<number>|string
+export type Quads = number[]|string
+export type imaginary = null
+export type TetracoordBytes = Uint8Array|imaginary
 
 // classes
 
@@ -25,14 +27,26 @@ export type Quads = Array<number>|string
  * Tetracoordinate point.
  */
  export class Tetracoordinate {
-    static LEVELS_PER_BYTE: number = 4
+    static VALUES_PER_LEVEL: number = 4
+    static BITS_PER_LEVEL: number = 2
+    static BITS_PER_BYTE: number = 8
+    static LEVELS_PER_BYTE: number = Tetracoordinate.BITS_PER_BYTE / Tetracoordinate.BITS_PER_LEVEL
     static DEFAULT_MAX_LEVELS: number = Tetracoordinate.LEVELS_PER_BYTE * 1
+
+    static imaginary: imaginary = null
 
     // unit tcoords
     static ZERO: Tetracoordinate = new Tetracoordinate('0', 0)
     static ONE: Tetracoordinate = new Tetracoordinate('1', 0)
     static TWO: Tetracoordinate = new Tetracoordinate('2', 0)
     static THREE: Tetracoordinate = new Tetracoordinate('3', 0)
+    // irrational unit tcoords
+    static NONE: Tetracoordinate = new Tetracoordinate('0.1', 0, undefined, undefined, true)
+    static NTWO: Tetracoordinate = new Tetracoordinate('0.2', 0, undefined, undefined, true)
+    static NTHREE: Tetracoordinate = new Tetracoordinate('0.3', 0, undefined, undefined, true)
+    // imaginary unit tcoords
+    static FOUR: Tetracoordinate = new Tetracoordinate('4', 0)
+    static NFOUR: Tetracoordinate = new Tetracoordinate('0.4', 0, undefined, undefined, true)
 
     static unit_to_cartesian: Map<Tetracoordinate, CartesianCoordinate> = new Map()
 
@@ -40,7 +54,7 @@ export type Quads = Array<number>|string
      * Raw binary representation of this tcoord. Each tcoord digit/place value is represented with 2 bits.
      * Each byte represents up to 4 tcoord digits (8/2=4).
      */
-    bytes: Uint8Array
+    bytes: TetracoordBytes
     /**
      * Number of significant quad digits in this tcoord (can be less than num_bytes*4).
      */
@@ -68,11 +82,11 @@ export type Quads = Array<number>|string
      * that could have leading/trailing insignificant zeros.
      */
     constructor(
-        value: Tetracoordinate|Uint8Array|Array<number>|string=undefined, 
-        power: number=undefined, 
-        quad_order: TetracoordQuadOrder=undefined,
-        num_levels: number=undefined,
-        irrational: boolean=undefined
+        value?: Tetracoordinate|Uint8Array|Array<number>|string, 
+        power?: number, 
+        quad_order?: TetracoordQuadOrder,
+        num_levels?: number,
+        irrational?: boolean
     ) {
         this.quad_order = quad_order === undefined ? TetracoordQuadOrder.DEFAULT : quad_order
         this.bytes = new Uint8Array(Tetracoordinate.LEVELS_PER_BYTE / Tetracoordinate.DEFAULT_MAX_LEVELS)
@@ -129,9 +143,9 @@ export type Quads = Array<number>|string
      * 
      * @returns {Tetracoordinate} this
      */
-    set_digits(digits: Array<number>|string, level_order: TetracoordQuadOrder=undefined): Tetracoordinate {
+    set_digits(digits: number[]|string, level_order?: TetracoordQuadOrder): Tetracoordinate {
         if (typeof digits === 'string' || digits instanceof String) {
-            let digits_arr: Array<number> = digits.split('').map((d_char) => {
+            let digits_arr: number[] = digits.split('').map((d_char) => {
                 return Number.parseInt(d_char)
             })
             digits = digits_arr
@@ -146,7 +160,7 @@ export type Quads = Array<number>|string
         // zero pad digits to fill bytes
         let rem = this.num_levels % Tetracoordinate.LEVELS_PER_BYTE
         if (rem > 0) {
-            let zeros: Array<number> = new Array(Tetracoordinate.LEVELS_PER_BYTE - rem)
+            let zeros: number[] = new Array(Tetracoordinate.LEVELS_PER_BYTE - rem)
             zeros.fill(0)
 
             if (this.quad_order === TetracoordQuadOrder.HIGH_FIRST) {
@@ -186,29 +200,40 @@ export type Quads = Array<number>|string
         for (let i=0; i<digits.length; i++) {
             let qi = quad_idx_ordered(quad_idx)
             let bi = byte_idx_ordered(byte_idx)
+            let q: number = digits[i]
 
-            // bit shift to current level quad (bit pair) in byte
-            let d = digits[i] << qi * 2
+            if (q < Tetracoordinate.VALUES_PER_LEVEL) {
+                // bit shift to current level quad (bit pair) in byte
+                let d = q << qi * Tetracoordinate.BITS_PER_LEVEL
 
-            // bitwise or to set quad within byte
-            byte |= d
+                // bitwise or to set quad within byte
+                byte |= d
 
-            // console.log(
-            //     `debug Bi=${bi} qi=${qi} Bb=${byte.toString(2)} Bq=${byte.toString(4)}`
-            // )
+                // console.log(
+                //     `debug Bi=${bi} qi=${qi} Bb=${byte.toString(2)} Bq=${byte.toString(4)}`
+                // )
 
-            // update offsets
-            quad_idx++
-            if (quad_idx >= Tetracoordinate.LEVELS_PER_BYTE) {
-                // write byte to bytes
-                this.bytes.set([byte], bi)
+                // update offsets
+                quad_idx++
+                if (quad_idx >= Tetracoordinate.LEVELS_PER_BYTE) {
+                    // write byte to bytes
+                    this.bytes.set([byte], bi)
 
-                byte_idx++
-                quad_idx = 0
-                byte = 0
+                    byte_idx++
+                    quad_idx = 0
+                    byte = 0
+                }
+            }
+            else {
+                if (q > Tetracoordinate.VALUES_PER_LEVEL) {
+                    console.log(`error invalid tcoord digit at idx [${i}] = ${q}`)
+                }
+                // else, imaginary has no value representation
+                
+                this.bytes = Tetracoordinate.imaginary
             }
         }
-        if (byte_idx < this.bytes.byteLength) {
+        if (this.bytes !== Tetracoordinate.imaginary && byte_idx < this.bytes.byteLength) {
             // write last byte to bytes
             this.bytes.set([byte], byte_idx_ordered(byte_idx))
         }
@@ -229,46 +254,64 @@ export type Quads = Array<number>|string
      * 
      * // TODO handle irrational
      * 
-     * // TODO handle orientation!=DEFAULT
-     * 
      * @param {Orientation} orientation
      * 
      * @returns Equivalent point vector in cartesian 2d (x,y) space.
      */
-    to_cartesian_coord(orientation: Orientation=undefined): CartesianCoordinate {
+    to_cartesian_coord(orientation?: Orientation): CartesianCoordinate {
         if (orientation === undefined) {
             orientation = Orientation.DEFAULT
         }
 
         // for each quad digit, calculate unit cartesian vector, and flip+scale by level power,
         // from highest to lowest power
-        let quads: Array<string> = this.get_quad_strs()
+        let quads: string[] = this.get_quad_strs()
         if (this.quad_order === TetracoordQuadOrder.LOW_FIRST) {
             quads.reverse()
         }
-        let vectors: Array<Vector2D> = new Array(this.num_levels)
+        let vectors: Vector2D[] = new Array(this.num_levels)
         let level = this.num_levels-1 + this.power
         let level_even: boolean = level % 2 == 0
         for (let i=0; i<this.num_levels; i++) {
-            const q: string = quads[i]
+            const q: number = Tetracoordinate.reorient_digit(quads[i], orientation)
 
             // find unit ccoord (level=0)
             let uc: CartesianCoordinate
             switch (q) {
-                case '0':
+                case 0:
                     uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.ZERO)
                     break
 
-                case '1':
+                case 1:
                     uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.ONE)
                     break
 
-                case '2':
+                case 2:
                     uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.TWO)
                     break
 
-                case '3':
+                case 3:
                     uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.THREE)
+                    break
+
+                case -1:
+                    uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.NONE)
+                    break
+
+                case -2:
+                    uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.NTWO)
+                    break
+
+                case -3:
+                    uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.NTHREE)
+                    break
+
+                case 4:
+                    uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.FOUR)
+                    break
+
+                case -4:
+                    uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.NFOUR)
                     break
                 
                 default:
@@ -289,7 +332,7 @@ export type Quads = Array<number>|string
             vectors[i] = v
 
             level--
-            if (q === '0') {
+            if (q === 0) {
                 // update flip for entering center cell only
                 level_even = !level_even
             }
@@ -431,6 +474,7 @@ export type Quads = Array<number>|string
     }
 
     /**
+     * Convert a cartesian coordinate to the closest corresponding tetracoordinate.
      * 
      * @param ccoord Cartesian coord to convert.
      * @param precision Precision determines min level for rounding to nearest tcoord.
@@ -566,6 +610,72 @@ export type Quads = Array<number>|string
         }
         return new Tetracoordinate(quads, power, quad_order)
     }
+
+    /**
+     * @param q A single quaternary digit, corresponding to a raw unit tcoord under default
+     * orientation.
+     * 
+     * @returns Reoriented signed digit, quaternary in all cases, **except** when orientation is `LEFT` or `RIGHT`, 
+     * where these imaginary directions are denoted 4 (right) and -4 (left). Datatype is same as `q`.
+     */
+    static reorient_digit(q: string|number, orientation?: Orientation): number {
+        let i = typeof q === 'string' ? Number.parseInt(q) : q
+
+        if (orientation !== undefined) {
+            if (i != 0) {
+                switch (orientation) {
+                    case Orientation.LEFT:
+                        switch (i) {
+                            case 1:
+                                i = -4
+                                break
+                            case 2:
+                                i = 3
+                                break
+                            case 3:
+                                i = -2
+                                break
+                        }
+                        break
+    
+                    case Orientation.DOWN:
+                        switch (i) {
+                            case 1:
+                                i = -1
+                                break
+                            case 2:
+                                i = -2
+                                break
+                            case 3:
+                                i = -3
+                                break
+                        }
+                        break
+    
+                    case Orientation.RIGHT:
+                        switch (i) {
+                            case 1:
+                                i = 4
+                                break
+                            case 2:
+                                i = -3
+                                break
+                            case 3:
+                                i = 2
+                                break
+                        }
+                        break
+    
+                    case Orientation.UP:
+                        // up is default
+                        break
+                }
+            }
+            // else 0 always 0
+        }
+
+        return i
+    }
 }
 
 // Tetracoordinate overrides
@@ -578,6 +688,7 @@ up/default
     1 = (    0,    1)
     2 = (-√3/2, -1/2)
     3 = ( √3/2, -1/2)
+    4 = (    1,    0) imaginary, used for orientation
 
 down
     0 = (    0,    0)
@@ -589,6 +700,13 @@ Tetracoordinate.unit_to_cartesian.set(Tetracoordinate.ZERO, {x: 0, y: 0})
 Tetracoordinate.unit_to_cartesian.set(Tetracoordinate.ONE, {x: 0, y: 1})
 Tetracoordinate.unit_to_cartesian.set(Tetracoordinate.TWO, {x: -TRIG_COS_PI_OVER_6, y: -TRIG_SIN_PI_OVER_6})
 Tetracoordinate.unit_to_cartesian.set(Tetracoordinate.THREE, {x: TRIG_COS_PI_OVER_6, y: -TRIG_SIN_PI_OVER_6})
+
+Tetracoordinate.unit_to_cartesian.set(Tetracoordinate.NONE, {x: 0, y: -1})
+Tetracoordinate.unit_to_cartesian.set(Tetracoordinate.NTWO, {x: TRIG_COS_PI_OVER_6, y: TRIG_SIN_PI_OVER_6})
+Tetracoordinate.unit_to_cartesian.set(Tetracoordinate.NTHREE, {x: -TRIG_COS_PI_OVER_6, y: TRIG_SIN_PI_OVER_6})
+
+Tetracoordinate.unit_to_cartesian.set(Tetracoordinate.FOUR, {x: 1, y: 0})
+Tetracoordinate.unit_to_cartesian.set(Tetracoordinate.NFOUR, {x: -1, y: 0})
 
 // exports
 

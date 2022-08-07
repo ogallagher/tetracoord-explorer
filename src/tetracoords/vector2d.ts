@@ -4,7 +4,7 @@
 
 // imports
 
-import Victor from 'victor'
+import Victor from '@a-robu/victor'
 
 // constants
 
@@ -20,6 +20,9 @@ export const TRIG_COS_PI_OVER_3 = TRIG_SIN_PI_OVER_6
 
 // types
 
+/**
+ * @deprecated
+ */
 export enum RotationDirection {
     COUNTER = 1,
     CLOCK = -1,
@@ -45,6 +48,7 @@ export class Vector2D extends Victor {
     }
 
     static add(a: Vector2D, b: Vector2D) {
+
         return new Vector2D(
             a.x + b.x,
             a.y + b.y
