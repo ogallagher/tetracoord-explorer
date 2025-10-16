@@ -5,11 +5,11 @@
 // imports
 
 import {
-    Orientation
+  Orientation
 } from './misc'
 
 import {
-    TetracoordSpace
+  TetracoordSpace
 } from './tetracoord_space'
 
 // classes
@@ -18,18 +18,18 @@ import {
  * Tetracoordinate engine, for managing a full system/model using tcoords.
  */
 export class TetracoordEngine {
-    tspace: TetracoordSpace
+  tspace: TetracoordSpace
 
-    constructor(orientation: Orientation=undefined) {
-        this.tspace = new TetracoordSpace(orientation)
-    }
+  constructor(orientation: Orientation = undefined) {
+    this.tspace = new TetracoordSpace(orientation)
+  }
 
-    /**
-     * String representation of this tetracoord engine instance.
-     */
-    toStringOverride(): string {
-        return `tengine(\n  tspace=${this.tspace}\n)`
-    }
+  /**
+   * String representation of this tetracoord engine instance.
+   */
+  toStringOverride(): string {
+    return `tengine(\n  tspace=${this.tspace}\n)`
+  }
 }
 
 // TetracoordEngine overrides

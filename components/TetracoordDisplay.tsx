@@ -1,5 +1,5 @@
 import React from "react"
-import { Tetracoordinate } from "../src/tetracoords"
+import { Tetracoordinate } from "../src/tetracoord"
 
 interface TetracoordDisplayProps {
     tcoord: Tetracoordinate

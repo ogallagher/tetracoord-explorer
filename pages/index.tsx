@@ -11,7 +11,7 @@ import TetracoordDisplay from "../components/TetracoordDisplay"
 
 import strings from "../public/strings.json"
 
-import { Tetracoordinate } from "../src/tetracoords"
+import { Tetracoordinate } from "../src/tetracoord"
 
 function HomePage() {
     let [cursor_tcoord, set_cursor_tcoord] = React.useState(new Tetracoordinate(Tetracoordinate.ZERO))

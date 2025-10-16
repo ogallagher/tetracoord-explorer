@@ -3,6 +3,7 @@ local/
 **/.DS_Store
 
 node_modules/
+package-lock.json
 tsc_out/
 
 tsconfig.tsbuildinfo
