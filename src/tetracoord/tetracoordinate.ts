@@ -7,7 +7,7 @@
 import { Orientation } from "./misc"
 import { ByteLevelOrder, imaginary } from "./scalar/byte"
 import { BITS_PER_BYTE } from "./scalar/binary"
-import { Q_BITS_PER_LEVEL, Q_LEVELS_PER_BYTE, Q_VALUES_PER_LEVEL } from './scalar/quaternary'
+import { Q_BITS_PER_LEVEL, Q_LEVELS_PER_BYTE, Q_VALUES_PER_LEVEL } from "./scalar/quaternary"
 import { CartesianCoordinate, Vector2D, TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6 } from "./vector2d"
 import { digitsToBytes, parsePowerScalar, PowerScalar } from "./scalar"
 import { RadixType } from "./scalar/radix"

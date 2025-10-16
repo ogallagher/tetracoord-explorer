@@ -2,8 +2,8 @@
  * Tetracoord engine cli driver.
  */
 
-import pino from 'pino'
-import TetracoordEngine from './tetracoord/tetracoord_engine'
+import pino from "pino"
+import TetracoordEngine from "./tetracoord/tetracoord_engine"
 
 const logger = pino({
   name: 'tcoord-cli',

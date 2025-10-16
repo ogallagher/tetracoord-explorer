@@ -6,11 +6,11 @@
 
 import {
   Orientation
-} from './misc'
+} from "./misc"
 
 import {
   TetracoordSpace
-} from './tetracoord_space'
+} from "./tetracoord_space"
 
 // classes
 

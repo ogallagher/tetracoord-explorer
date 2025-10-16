@@ -4,7 +4,7 @@
 
 // imports
 
-import Victor from '@a-robu/victor'
+import Victor from "@a-robu/victor"
 
 // constants
 

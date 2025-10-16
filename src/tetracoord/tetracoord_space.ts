@@ -6,14 +6,14 @@
 
 import {
   Orientation
-} from './misc'
+} from "./misc"
 import {
   Quads,
   Tetracoordinate
-} from './tetracoordinate'
+} from "./tetracoordinate"
 import Vector2D, {
   CartesianCoordinate, TRIG_PI_OVER_2, TRIG_PI_OVER_6, TRIG_PI
-} from './vector2d'
+} from "./vector2d"
 
 // constants
 

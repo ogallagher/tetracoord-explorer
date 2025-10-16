@@ -1,8 +1,8 @@
-import { parse, nary, token, err, unary } from 'subscript'
-import { PREC_ACCESS, PREC_TOKEN } from 'subscript/const'
-import { TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6 } from '../vector2d'
-import { parsePowerScalar, PowerScalar, RawScalar } from '../scalar'
-import { RadixType } from '../scalar/radix'
+import { parse, nary, token, err, unary } from "subscript"
+import { PREC_ACCESS, PREC_TOKEN } from "subscript/const"
+import { TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6 } from "../vector2d"
+import { parsePowerScalar, PowerScalar, RawScalar } from "../scalar"
+import { RadixType } from "../scalar/radix"
 
 export const RADIX_PREFIX = '0'
 export const RADIX_PREFIX_OP = '@'

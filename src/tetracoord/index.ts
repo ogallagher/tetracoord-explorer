@@ -4,12 +4,12 @@
 
 // imports
 
-import { Orientation } from './misc'
+import { Orientation } from "./misc"
 import { ByteLevelOrder } from "./scalar/byte"
-import { TRIG_PI, TRIG_PI_OVER_2, TRIG_PI_OVER_3, TRIG_PI_OVER_6, Vector2D } from './vector2d'
-import { Tetracoordinate } from './tetracoordinate'
-import { TetracoordSpace, TetracoordCell } from './tetracoord_space'
-import { TetracoordEngine } from './tetracoord_engine'
+import { TRIG_PI, TRIG_PI_OVER_2, TRIG_PI_OVER_3, TRIG_PI_OVER_6, Vector2D } from "./vector2d"
+import { Tetracoordinate } from "./tetracoordinate"
+import { TetracoordSpace, TetracoordCell } from "./tetracoord_space"
+import { TetracoordEngine } from "./tetracoord_engine"
 
 // exports
 

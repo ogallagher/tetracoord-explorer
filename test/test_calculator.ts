@@ -1,8 +1,8 @@
-import { describe, it } from 'mocha'
-import assert from 'node:assert'
-import { ExpressionTree, parseExpression, preparseExpression } from '../src/tetracoord/calculator/expression'
-import { TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6 } from '../src/tetracoord/vector2d'
-import { PowerScalar } from '../src/tetracoord/scalar'
+import { describe, it } from "mocha"
+import assert from "node:assert"
+import { ExpressionTree, parseExpression, preparseExpression } from "../src/tetracoord/calculator/expression"
+import { TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6 } from "../src/tetracoord/vector2d"
+import { PowerScalar } from "../src/tetracoord/scalar"
 
 describe('tetracoord.calculator', () => {
   describe('expression', () => {
