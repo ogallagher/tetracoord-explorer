@@ -15,10 +15,3 @@ export enum Orientation {
 
     DEFAULT = UP
 }
-
-export enum TetracoordQuadOrder {
-    HIGH_FIRST = 'h',
-    LOW_FIRST = 'l',
-
-    DEFAULT = HIGH_FIRST
-}

@@ -11,9 +11,9 @@ function TetracoordDisplay(props: TetracoordDisplayProps) {
 
     React.useEffect(() => {
         console.log(props.tcoord.toString())
-        set_tcoord_bytes(props.tcoord.get_quad_strs().join(''))
+        set_tcoord_bytes(props.tcoord.getQuadStrs().join(''))
 
-        let ccoord = props.tcoord.to_cartesian_coord()
+        let ccoord = props.tcoord.toCartesianCoord()
         let cx = Math.round(ccoord.x * 100000) / 100000
         let cy = Math.round(ccoord.y * 100000) / 100000
         set_tcoord_cmps(`${cx} , ${cy}`)

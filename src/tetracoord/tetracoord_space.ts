@@ -33,7 +33,7 @@ export class TetracoordCell {
 
   constructor(tcoord: Tetracoordinate, space: TetracoordSpace) {
     this.tcoord = tcoord
-    this.ccoord = Vector2D.fromObject(tcoord.to_cartesian_coord())
+    this.ccoord = Vector2D.fromObject(tcoord.toCartesianCoord())
     this.flip = TetracoordCell.tcoord_cell_flip(tcoord)
 
     this.anchor = TCOORD_CELL_ANCHOR_OFFSET.clone()
@@ -111,7 +111,7 @@ export class TetracoordCell {
     let qs: Array<number>
     if (tcoord instanceof Tetracoordinate) {
       // tcoord is tcoord
-      qs = tcoord.get_quad_strs().map((qs) => Number.parseInt(qs))
+      qs = tcoord.getQuadStrs().map((qs) => Number.parseInt(qs))
     }
     else if (typeof tcoord == 'string' || tcoord instanceof String) {
       // tcoord is string
@@ -204,7 +204,7 @@ export class TetracoordSpace {
       .subtract(this.origin)
       .divideScalar(this.scale)
 
-    let tcoord = Tetracoordinate.from_cartesian_coord(this.deorient_point(vector))
+    let tcoord = Tetracoordinate.fromCartesianCoord(this.deorient_point(vector))
 
     return this.tcoord_to_cell(tcoord)
   }
@@ -217,7 +217,7 @@ export class TetracoordSpace {
   tcoord_to_centroid(tcoord: Tetracoordinate): Vector2D {
     let flip = TetracoordCell.tcoord_cell_flip(tcoord)
 
-    let centroid = Vector2D.fromObject(tcoord.to_cartesian_coord())
+    let centroid = Vector2D.fromObject(tcoord.toCartesianCoord())
       .add(
         TCOORD_CELL_ANCHOR_OFFSET.clone()
           .multiplyScalarY(flip ? -1 : 1)
