@@ -1,3 +1,13 @@
+export enum Orientation {
+  UP = 'up',
+  DOWN = 'dn',
+  LEFT = 'lf',
+  RIGHT = 'rt',
+  CUSTOM = '',
+
+  DEFAULT = UP
+}
+
 export enum VectorType {
   /**
    * Cartesian coordinate.
@@ -8,3 +18,4 @@ export enum VectorType {
    */
   TCoord = 'tc'
 }
+

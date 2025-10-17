@@ -2,9 +2,13 @@ import { ByteLevelOrder, Imaginary, imaginary } from "./byte"
 import { B_BITS_PER_LEVEL, B_LEVELS_PER_BYTE, B_VALUES_PER_LEVEL, BITS_PER_BYTE } from "./binary"
 import { Q_BITS_PER_LEVEL, Q_LEVELS_PER_BYTE, Q_VALUES_PER_LEVEL } from "./quaternary"
 import { RadixType, radixTypeToValue } from "./radix"
-import { IRR_SUFFIX_I, NEG_OP, RADIX_PREFIX } from "../calculator/syntax"
+import { IRR_SUFFIX_I, NEG_OP, RADIX_PREFIX } from "../calculator/symbol"
 
 export type RawScalar = number|Uint8Array
+export enum RawScalarType {
+  Number = 'number',
+  Bytes = 'bytes'
+}
 
 export class PowerScalar {
   /**
@@ -75,7 +79,11 @@ export class PowerScalar {
       }
     }
 
-    return num
+    return num * this.sign
+  }
+
+  get defaultRadix(): RadixType {
+    return (typeof this.digits === 'number') ? RadixType.D : RadixType.B
   }
 
   /**
@@ -84,26 +92,24 @@ export class PowerScalar {
    * @param radix 
    */
   toDigitString(radix?: RadixType, showPower: boolean = true): string {
-    const radixCurrent: RadixType = (typeof this.digits === 'number') ? RadixType.D : RadixType.B
+    const radixCurrent: RadixType = this.defaultRadix
     radix = radix === undefined ? radixCurrent : radix
     const radixValue = radixTypeToValue(radix)
 
     // format digits
     let digitStr: string
-    if (radix !== radixCurrent) {
-      if (radixCurrent === RadixType.D) {
-        digitStr = (this.digits as number).toString(radixValue)
-      }
-      else {
-        const bytes = (this.digits as Uint8Array)
-        const byteStrs: string[] = new Array(bytes.byteLength)
+    if (radixCurrent === RadixType.D) {
+      digitStr = (this.digits as number).toString(radixValue)
+    }
+    else {
+      const bytes = (this.digits as Uint8Array)
+      const byteStrs: string[] = new Array(bytes.byteLength)
 
-        bytes.forEach((byte, index) => {
-          byteStrs[index] = byte.toString(radixValue)
-        })
+      bytes.forEach((byte, index) => {
+        byteStrs[index] = byte.toString(radixValue)
+      })
 
-        digitStr = byteStrs.join('')
-      }
+      digitStr = byteStrs.join('')
     }
 
     if (showPower) {
@@ -111,8 +117,8 @@ export class PowerScalar {
       if (this.power < 0) {
         const pointIndex = (
           this.levelOrder === ByteLevelOrder.HIGH_FIRST
-          ? digitStr.length - this.power
-          : this.power
+          ? digitStr.length + this.power
+          : -this.power
         )
 
         digitStr = digitStr.substring(0, pointIndex) + '.' + digitStr.substring(pointIndex)
@@ -152,10 +158,70 @@ export class PowerScalar {
     const irrationalSuffix = (this.irrational ? IRR_SUFFIX_I : '')
 
     return (
-      `${RADIX_PREFIX}${radix}${digitStr}${irrationalSuffix}`
+      `${RADIX_PREFIX}${radix || this.defaultRadix}${digitStr}${irrationalSuffix}`
     )
   }
+
+  private static toNumbers(a: number|PowerScalar, b: number|PowerScalar) {
+    const v = {
+      a: typeof a === 'number' ? a : a.toNumber(),
+      b: typeof b === 'number' ? b : b.toNumber()
+    }
+
+    const t = {
+      at: getRawScalarType(a),
+      bt: getRawScalarType(b)
+    }
+
+    return {...v, ...t}
+  }
+
+  /**
+   * Add scalars. Output {@linkcode RawScalarType representation} is determined by left operand.
+   * 
+   * Currently implemented by converting to raw numbers before adding, but if both operands are {@linkcode RawScalarType.Bytes}, then bitwise `|`
+   * might be more efficient.
+   * 
+   * // TODO handle irrational
+   * 
+   * @param a 
+   * @param b 
+   */
+  static add(a: number|PowerScalar, b: number|PowerScalar): PowerScalar {
+    const n = this.toNumbers(a, b)
+    const c = n.a + n.b
+    
+    if (n.at === RawScalarType.Number) {
+      return new PowerScalar(c)
+    }
+    else {
+      return parsePowerScalar(c.toString(2), RadixType.B, undefined)
+    }
+  }
+
+  /**
+   * Subtract scalars. See {@linkcode add}.
+   * 
+   * // TODO handle irrational
+   */
+  static subtract(a: number|PowerScalar, b: number|PowerScalar): PowerScalar {
+    const n = this.toNumbers(a, b)
+    const c = n.a - n.b
+    
+    if (n.at === RawScalarType.Number) {
+      return new PowerScalar(c)
+    }
+    else {
+      return parsePowerScalar(c.toString(2), RadixType.B, undefined)
+    }
+  }
 }
+
+export const getRawScalarType = (n: RawScalar|PowerScalar) => (
+  typeof (n instanceof PowerScalar ? n.digits : n) === 'number' 
+  ? RawScalarType.Number 
+  : RawScalarType.Bytes
+)
 
 /**
  * @param digits Int array where each element is a single digit.

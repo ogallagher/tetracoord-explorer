@@ -4,13 +4,8 @@
 
 // imports
 
-import {
-  Orientation
-} from "./misc"
-
-import {
-  TetracoordSpace
-} from "./tetracoord_space"
+import { Orientation } from "./vector/const"
+import { TetracoordSpace } from "./tetracoord_space"
 
 // classes
 

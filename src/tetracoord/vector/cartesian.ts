@@ -12,15 +12,6 @@ export const TRIG_COS_PI_OVER_6 = Math.sqrt(3) / 2
 export const TRIG_SIN_PI_OVER_3 = TRIG_COS_PI_OVER_6
 export const TRIG_COS_PI_OVER_3 = TRIG_SIN_PI_OVER_6
 
-/**
- * @deprecated
- */
-export enum RotationDirection {
-  COUNTER = 1,
-  CLOCK = -1,
-  DEFAULT = COUNTER
-}
-
 export type RawCartesianCoord = PtLike
 
 export class CartesianCoordinate {

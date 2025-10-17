@@ -4,16 +4,16 @@
 
 // imports
 
-import { Orientation } from "../misc"
+import { Orientation } from "./const"
 import { ByteLevelOrder, Imaginary, imaginary } from "../scalar/byte"
 import { BITS_PER_BYTE } from "../scalar/binary"
 import { Q_BITS_PER_LEVEL, Q_LEVELS_PER_BYTE, Q_VALUES_PER_LEVEL } from "../scalar/quaternary"
 import { RawCartesianCoord, CartesianCoordinate, TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6 } from "./cartesian"
 import { digitsToBytes, parsePowerScalar, PowerScalar } from "../scalar"
 import { RadixType } from "../scalar/radix"
-import { VEC_ACCESS_OP } from "../calculator/syntax"
+import { VEC_ACCESS_OP } from "../calculator/symbol"
 import { Pt } from "pts-math"
-import { VectorType } from "."
+import { VectorType } from "./const"
 
 // ts types interfaces
 
@@ -160,6 +160,10 @@ export class Tetracoordinate {
     if (this.value !== Imaginary) {
       this.value.power += powerOffset
     }
+  }
+
+  clone() {
+    return new Tetracoordinate(this)
   }
 
   set(other: Tetracoordinate) {
@@ -319,7 +323,6 @@ export class Tetracoordinate {
   }
 
   /**
-   * 
    * @param other 
    * 
    * @returns `this`
@@ -329,10 +332,9 @@ export class Tetracoordinate {
   }
 
   /**
-   * 
    * @param other Other tcoord to add.
    * 
-   * @returns Self for method chaining.
+   * @returns `this`
    */
   addFromCartesian(other: Tetracoordinate): Tetracoordinate {
     let cthis = this.toCartesianCoord()
@@ -345,6 +347,24 @@ export class Tetracoordinate {
     this.set(sum)
 
     return sum
+  }
+
+  /**
+   * @param other Other tcoord to subtract.
+   * 
+   * @returns `this`
+   */
+  subtractFromCartesian(other: Tetracoordinate): Tetracoordinate {
+    let cthis = this.toCartesianCoord()
+    let cother = other.toCartesianCoord()
+
+    let diff = Tetracoordinate.fromCartesianCoord(
+      CartesianCoordinate.subtract(cthis, cother),
+      Math.min(this.value.power, other.value.power)
+    )
+    this.set(diff)
+
+    return diff
   }
 
   /**
@@ -471,20 +491,9 @@ export class Tetracoordinate {
       loc.add(step)
       delta = target.v.$subtract(loc)
       dist = delta.magnitude()
-      /*
-      console.log(
-          `debug ` + 
-          `power=${power} scale=${scale} precision=${precision} ` + 
-          `quad=${quad} flip=${flip}\n` +
-          `step=${step}\n` + 
-          `prev_loc=${prev_loc}\nprev_delta=${prev_delta}\nprev_dist=${prev_dist}\n` +
-          `loc=${loc}\ndelta=${delta}\ndist=${dist}`
-      )
-      */
 
       // TODO improve threshold for comparing before/after step
       if (dist > prev_dist) {
-        // console.log(`debug ${dist} > ${prev_dist} --> quad=${0} -flip=${-flip}`)
         // undo step; stay in zero
         loc = prev_loc
         delta = prev_delta
@@ -496,7 +505,6 @@ export class Tetracoordinate {
         flip = -flip
       }
       else {
-        // console.log(`debug ${dist} < ${prev_dist} --> quad=${quad} flip=${flip}`)
         // add quad to number
         quads.push(quad)
       }

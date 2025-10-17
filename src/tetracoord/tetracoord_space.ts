@@ -6,7 +6,7 @@
 
 import {
   Orientation
-} from "./misc"
+} from "./vector/const"
 import {
   Quads,
   Tetracoordinate

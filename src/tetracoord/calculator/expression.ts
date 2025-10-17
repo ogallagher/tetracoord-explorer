@@ -3,9 +3,9 @@ import { PREC_ACCESS, PREC_TOKEN } from "subscript/const"
 import CartesianCoordinate, { TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6 } from "../vector/cartesian"
 import { parsePowerScalar, PowerScalar } from "../scalar"
 import { RadixType } from "../scalar/radix"
-import { VectorType } from "../vector"
+import { VectorType } from "../vector/const"
 import Tetracoordinate from "../vector/tetracoordinate"
-import { COSPI6_CONST, IRR_SUFFIX_DOTS, IRR_SUFFIX_I, IRR_SUFFIX_OP, NEG_OP, RADIX_PREFIX, RADIX_PREFIX_OP, SINPI6_CONST, VEC_ACCESS_OP } from "./syntax"
+import { COSPI6_CONST, IRR_SUFFIX_DOTS, IRR_SUFFIX_I, IRR_SUFFIX_OP, NEG_OP, POS_OP, RADIX_PREFIX, RADIX_PREFIX_OP, SINPI6_CONST, VEC_ACCESS_OP } from "./symbol"
 
 // parser handle literal number radix prefix as <radix> @ <raw-fractional-value>
 nary(RADIX_PREFIX_OP, PREC_ACCESS)
@@ -85,6 +85,43 @@ function parseScalarNode(node: ExpressionTree, radixType: RadixType): PowerScala
   }
 }
 
+function evalAddSub(op: '-'|'+', a: ExpressionValue, b: ExpressionValue): ExpressionValue {
+  if (typeof a === 'number' && typeof b === 'number') {
+    // simple scalar
+    return op === NEG_OP ? a - b : a + b
+  }
+  else {
+    if (a instanceof PowerScalar || b instanceof PowerScalar) {
+      // power scalar
+      return (
+        op === NEG_OP
+        ? PowerScalar.subtract(a as number|PowerScalar, b as number|PowerScalar)
+        : PowerScalar.add(a as number|PowerScalar, b as number|PowerScalar)
+      )
+    }
+    else if (a instanceof Tetracoordinate && b instanceof Tetracoordinate) {
+      // tcoord vector
+      return (
+        op === NEG_OP
+        ? a.clone().subtractFromCartesian(b)
+        : a.clone().addFromCartesian(b)
+      )
+    }
+    else if (a instanceof CartesianCoordinate && b instanceof CartesianCoordinate) {
+      // ccoord vector
+      return (
+        op === NEG_OP
+        ? CartesianCoordinate.subtract(a, b)
+        : CartesianCoordinate.add(a, b)
+      )
+    }
+    else {
+      // mixed vector
+      throw new Error(`vector binary subtract not supported for mixed types; convert first. a=${a} b=${b}`)
+    }
+  }
+}
+
 /**
  * Both parses and evaluates the expression abstract syntax tree from the given root node.
  */
@@ -102,20 +139,35 @@ function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixTy
     // convert implied radix [~ a=<scalar-node>] to PowerScalar
     return parseScalarNode(node, radixCtx)
   }
-  else if (op === NEG_OP && b === undefined) {
-    // unary negate 
+  else if (op === NEG_OP || op === POS_OP) {
     const _a = parseExpressionTree(a as ExpressionTree)
-    if (typeof _a === 'number') {
-      return -_a
+
+    if (b === undefined) {
+      // unary
+      if (op === NEG_OP) {
+        // negate 
+        if (typeof _a === 'number') {
+          return -_a
+        }
+        else if (_a instanceof PowerScalar) {
+          return _a.negate()
+        }
+        else if (_a instanceof Tetracoordinate) {
+          return _a.negateFromCartesian()
+        }
+        else if (_a instanceof CartesianCoordinate) {
+          return _a.negate()
+        }
+      }
+      else {
+        // positive (identity)
+        return _a
+      }
     }
-    else if (_a instanceof PowerScalar) {
-      return _a.negate()
-    }
-    else if (_a instanceof Tetracoordinate) {
-      return _a.negateFromCartesian()
-    }
-    else if (_a instanceof CartesianCoordinate) {
-      return _a.negate()
+    else {
+      // binary
+      const _b = parseExpressionTree(b as ExpressionTree)
+      return evalAddSub(op, _a, _b)
     }
   }
   else if (op === VEC_ACCESS_OP && (a === VectorType.CCoord || a === VectorType.TCoord)) {
