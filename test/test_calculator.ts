@@ -122,11 +122,13 @@ describe('tetracoord.calculator', () => {
             ['cospi6 - sinpi6', TRIG_COS_PI_OVER_6 - TRIG_SIN_PI_OVER_6],
             ['1 - sinpi6', 0.5],
             ['0q3210 - 0q0001', new PowerScalar({digits: new Uint8Array([0b11100011])})],
+            ['0q3210 - +0q0001', new PowerScalar({digits: new Uint8Array([0b11100011])})],
             ['0q3210 - -0q0001', new PowerScalar({digits: new Uint8Array([0b11100101])})],
 
             // add
             ['6.5 + 0.5', 7],
             ['0q12.2 + 0.5', new PowerScalar({digits: new Uint8Array([0b0111])})], // 0q12.2 + 0q0.2 = 0q13
+            ['0q12.2 + 0b0.1', new PowerScalar({digits: new Uint8Array([0b0111])})],
             ['-sinpi6 + -sinpi6', -1],
             ['0q32103111 + 0q00200222', new PowerScalar({digits: new Uint8Array([0b11101100, 255])})],
           ]) {

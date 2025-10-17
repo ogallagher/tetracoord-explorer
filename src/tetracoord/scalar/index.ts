@@ -201,7 +201,9 @@ export class PowerScalar {
   }
 
   /**
-   * Add scalars. Output {@linkcode RawScalarType representation} is determined by left operand.
+   * Add scalars. 
+   * 
+   * Output {@linkcode RawScalarType representation} is determined by left operand. 
    * 
    * Currently implemented by converting to raw numbers before adding, but if both operands are {@linkcode RawScalarType.Bytes}, then bitwise `|`
    * might be more efficient.
