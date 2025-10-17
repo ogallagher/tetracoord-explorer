@@ -67,6 +67,14 @@ export class CartesianCoordinate {
     return new CartesianCoordinate(this.x, this.y)
   }
 
+  negate(): CartesianCoordinate {
+    this.v.multiply(-1)
+    this.x.negate()
+    this.y.negate()
+
+    return this
+  }
+
   static fromRaw(v: RawCartesianCoord): CartesianCoordinate {
     return new CartesianCoordinate(v[0], v[1])
   }

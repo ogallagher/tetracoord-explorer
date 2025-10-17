@@ -5,17 +5,7 @@ import { parsePowerScalar, PowerScalar } from "../scalar"
 import { RadixType } from "../scalar/radix"
 import { VectorType } from "../vector"
 import Tetracoordinate from "../vector/tetracoordinate"
-
-export const RADIX_PREFIX = '0'
-export const RADIX_PREFIX_OP = '@'
-export const IRR_SUFFIX_I = 'i'
-export const IRR_SUFFIX_DOTS = '...'
-export const IRR_SUFFIX_OP = '~'
-export const COSPI6_CONST = 'cospi6'
-export const SINPI6_CONST = 'sinpi6'
-export const VEC_ACCESS_OP = '[]'
-export const ITEM_DELIM_OP = ','
-export const STMT_DELIM_OP = ';'
+import { COSPI6_CONST, IRR_SUFFIX_DOTS, IRR_SUFFIX_I, IRR_SUFFIX_OP, NEG_OP, RADIX_PREFIX, RADIX_PREFIX_OP, SINPI6_CONST, VEC_ACCESS_OP } from "./syntax"
 
 // parser handle literal number radix prefix as <radix> @ <raw-fractional-value>
 nary(RADIX_PREFIX_OP, PREC_ACCESS)
@@ -111,6 +101,22 @@ function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixTy
   else if (op === IRR_SUFFIX_OP) {
     // convert implied radix [~ a=<scalar-node>] to PowerScalar
     return parseScalarNode(node, radixCtx)
+  }
+  else if (op === NEG_OP && b === undefined) {
+    // unary negate 
+    const _a = parseExpressionTree(a as ExpressionTree)
+    if (typeof _a === 'number') {
+      return -_a
+    }
+    else if (_a instanceof PowerScalar) {
+      return _a.negate()
+    }
+    else if (_a instanceof Tetracoordinate) {
+      return _a.negateFromCartesian()
+    }
+    else if (_a instanceof CartesianCoordinate) {
+      return _a.negate()
+    }
   }
   else if (op === VEC_ACCESS_OP && (a === VectorType.CCoord || a === VectorType.TCoord)) {
     if (a === VectorType.CCoord) {

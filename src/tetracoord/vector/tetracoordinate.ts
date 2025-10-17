@@ -11,7 +11,7 @@ import { Q_BITS_PER_LEVEL, Q_LEVELS_PER_BYTE, Q_VALUES_PER_LEVEL } from "../scal
 import { RawCartesianCoord, CartesianCoordinate, TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6 } from "./cartesian"
 import { digitsToBytes, parsePowerScalar, PowerScalar } from "../scalar"
 import { RadixType } from "../scalar/radix"
-import { RADIX_PREFIX } from "../calculator/expression"
+import { RADIX_PREFIX } from "../calculator/syntax"
 import { Pt } from "pts-math"
 
 // ts types interfaces
@@ -132,6 +132,7 @@ export class Tetracoordinate {
         this.value = new PowerScalar(
           bytes,
           0,
+          undefined,
           irrational,
           quad_order
         )
@@ -142,7 +143,7 @@ export class Tetracoordinate {
     }
     else {
       // create tcoord from bytes
-      this.value = new PowerScalar(value, 0, irrational, quad_order)
+      this.value = new PowerScalar(value, 0, undefined, irrational, quad_order)
     }
 
     this.num_levels = (
@@ -155,7 +156,7 @@ export class Tetracoordinate {
       : num_levels
     )
 
-    if (powerOffset > 0) {
+    if (this.value !== Imaginary) {
       this.value.power += powerOffset
     }
   }

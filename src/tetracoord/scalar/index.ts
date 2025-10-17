@@ -2,7 +2,7 @@ import { ByteLevelOrder, Imaginary, imaginary } from "./byte"
 import { B_BITS_PER_LEVEL, B_LEVELS_PER_BYTE, B_VALUES_PER_LEVEL, BITS_PER_BYTE } from "./binary"
 import { Q_BITS_PER_LEVEL, Q_LEVELS_PER_BYTE, Q_VALUES_PER_LEVEL } from "./quaternary"
 import { RadixType, radixTypeToValue } from "./radix"
-import { IRR_SUFFIX_I, RADIX_PREFIX } from "../calculator/expression"
+import { IRR_SUFFIX_I, NEG_OP, RADIX_PREFIX } from "../calculator/syntax"
 
 export type RawScalar = number|Uint8Array
 
@@ -17,15 +17,22 @@ export class PowerScalar {
    * // TODO might currently be number of levels to shift (ex. quaternary power=1 shifts 2 binary digits); be consistent
    */
   power: number
+  sign: number
   /**
    * Whether least significant digit repeats infinitely as fractional digits after decimal point.
    */
   irrational: boolean
   levelOrder: ByteLevelOrder
 
-  constructor(d: RawScalar, p: number = 0, i: boolean = false, o: ByteLevelOrder = ByteLevelOrder.DEFAULT) {
+  constructor(d: RawScalar, p: number = 0, s: number = 1, i: boolean = false, o: ByteLevelOrder = ByteLevelOrder.DEFAULT) {
+    if (typeof d === 'number' && d < 0) {
+      d *= -1
+      s *= -1
+    }
+
     this.digits = d
     this.power = p
+    this.sign = s
     this.irrational = i
     this.levelOrder = o
   }
@@ -36,7 +43,12 @@ export class PowerScalar {
       ? this.digits
       : new Uint8Array(this.digits)
     )
-    return new PowerScalar(digits, this.power, this.irrational, this.levelOrder)
+    return new PowerScalar(digits, this.power, this.sign, this.irrational, this.levelOrder)
+  }
+
+  negate(): PowerScalar {
+    this.sign *= -1
+    return this
   }
 
   /**
@@ -227,7 +239,13 @@ export function digitsToBytes(digits: number[], radix: RadixType.B|RadixType.Q, 
  * @returns Whole scalar digits without radix and power.
  */
 export function parseRawDigits(rawNum: number|string, levelOrder: ByteLevelOrder = ByteLevelOrder.DEFAULT) {
-  const rawStr = typeof rawNum === 'number' ? rawNum.toString(10) : rawNum
+  let rawStr = typeof rawNum === 'number' ? rawNum.toString(10) : rawNum
+
+  // extract sign
+  let sign = rawStr.startsWith(NEG_OP) ? -1 : 1
+  if (sign === -1) {
+    rawStr = rawStr.substring(1)
+  }
 
   let rawDigits: number[] = []
   let c: string
@@ -248,7 +266,8 @@ export function parseRawDigits(rawNum: number|string, levelOrder: ByteLevelOrder
 
   return {
     rawDigits,
-    power
+    power,
+    sign
   }
 }
 
@@ -263,7 +282,7 @@ export function parsePowerScalar(
   irrational: boolean = false,
   levelOrder: ByteLevelOrder = ByteLevelOrder.DEFAULT
 ): PowerScalar|imaginary {
-  const { rawDigits, power } = parseRawDigits(rawNum, levelOrder)
+  const { rawDigits, power, sign } = parseRawDigits(rawNum, levelOrder)
   const leastDigitNonzero = rawDigits[levelOrder === ByteLevelOrder.HIGH_FIRST ? rawDigits.length-1 : 0] !== 0
 
   if (radixType === RadixType.D) {
@@ -276,6 +295,7 @@ export function parsePowerScalar(
     return new PowerScalar(
       digits,
       power,
+      sign,
       irrational && leastDigitNonzero,
       ByteLevelOrder.HIGH_FIRST
     )
@@ -289,6 +309,7 @@ export function parsePowerScalar(
     return new PowerScalar(
       bytes,
       power,
+      sign,
       irrational && leastDigitNonzero,
       levelOrder
     )

@@ -1,6 +1,6 @@
 import { describe, it } from "mocha"
 import assert from "node:assert"
-import { ExpressionTree, ExpressionValue, evalExpression, preparseExpression } from "../src/tetracoord/calculator/expression"
+import { ExpressionValue, evalExpression, preparseExpression } from "../src/tetracoord/calculator/expression"
 import CartesianCoordinate, { TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6 } from "../src/tetracoord/vector/cartesian"
 import { PowerScalar } from "../src/tetracoord/scalar"
 import { Tetracoordinate } from "../src/tetracoord"
@@ -21,7 +21,8 @@ describe('tetracoord.calculator', () => {
         ['0d1.5i', 'd@1.5~'],
         ['0q320.1i', 'q@320.1~'],
         ['0q320.1...', 'q@320.1~'],
-        ['0q320.0i', 'q@320.0~']
+        ['0q320.0i', 'q@320.0~'],
+        ['-0q320.0i', '-q@320.0~']
       ]) {
         actual = preparseExpression(input)
         assert.strictEqual(actual, expected)
@@ -43,11 +44,12 @@ describe('tetracoord.calculator', () => {
         ['sinpi6', TRIG_SIN_PI_OVER_6],
 
         // irrational
-        ['0d1.5i', new PowerScalar(15, -1, true)],
-        ['0q320.1i', new PowerScalar(new Uint8Array([0b11100001]), -1, true)],
-        ['0q320.1...', new PowerScalar(new Uint8Array([0b11100001]), -1, true)],
-        ['0q320.0i', new PowerScalar(new Uint8Array([0b111000]), 0, false)],
-        ['0q320.01i', new PowerScalar(new Uint8Array([0b11, 0b10000001]), -2, true)]
+        ['0d1.5i', new PowerScalar(15, -1, undefined, true)],
+        ['0q320.1i', new PowerScalar(new Uint8Array([0b11100001]), -1, undefined, true)],
+        ['0q320.1...', new PowerScalar(new Uint8Array([0b11100001]), -1, undefined, true)],
+        ['0q320.0i', new PowerScalar(new Uint8Array([0b111000]), 0, undefined, false)],
+        ['0q320.01i', new PowerScalar(new Uint8Array([0b11, 0b10000001]), -2, undefined, true)],
+        ['-0q320.1i', new PowerScalar(new Uint8Array([0b11100001]), -1, -1, true)],
       ]) {
         try {
           actual = evalExpression(input as string)
@@ -65,8 +67,11 @@ describe('tetracoord.calculator', () => {
 
       for (let [input, expected] of [
         ['tc[0q31]', new Tetracoordinate('31')],
+        ['tc[0q1.1]', new Tetracoordinate('11', undefined, undefined, -1)],
         ['tc[0b1101]', new Tetracoordinate('31')],
-        ['tc[0q312i]', new Tetracoordinate('312', undefined, undefined, undefined, true)]
+        ['tc[0q312i]', new Tetracoordinate('312', undefined, undefined, undefined, true)],
+        ['tc[0q312.1i]', new Tetracoordinate('3121', undefined, undefined, -1, true)],
+        ['tc[-0q312.1i]', new Tetracoordinate('-3121', undefined, undefined, -1, true)]
       ]) {
         try {
           actual = evalExpression(input as string)
@@ -75,7 +80,7 @@ describe('tetracoord.calculator', () => {
           throw new Error(`parse error for input=${input} preparse=${preparseExpression(input as string)}`, {cause: err})
         }
 
-        assert.deepStrictEqual(actual, expected, `mismatch for input=${input}`)
+        assert.deepStrictEqual(actual, expected, `mismatch for input=${input} actual=${actual} expected=${expected}`)
       }
     })
 
