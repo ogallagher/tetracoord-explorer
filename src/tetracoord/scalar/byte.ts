@@ -6,3 +6,4 @@ export enum ByteLevelOrder {
 }
 
 export type imaginary = null
+export const Imaginary: imaginary = null

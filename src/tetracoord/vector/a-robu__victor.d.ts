@@ -1,5 +1,5 @@
 /**
- * // TODO declare remaining members
+ * // TODO declare remaining members. See http://victorjs.org/#documentation
  */
 
 declare module '@a-robu/victor'

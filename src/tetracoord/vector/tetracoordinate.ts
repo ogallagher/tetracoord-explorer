@@ -4,14 +4,15 @@
 
 // imports
 
-import { Orientation } from "./misc"
-import { ByteLevelOrder, imaginary } from "./scalar/byte"
-import { BITS_PER_BYTE } from "./scalar/binary"
-import { Q_BITS_PER_LEVEL, Q_LEVELS_PER_BYTE, Q_VALUES_PER_LEVEL } from "./scalar/quaternary"
-import { CartesianCoordinate, Vector2D, TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6 } from "./vector2d"
-import { digitsToBytes, parsePowerScalar, PowerScalar } from "./scalar"
-import { RadixType } from "./scalar/radix"
-import { RADIX_PREFIX } from "./calculator/expression"
+import { Orientation } from "../misc"
+import { ByteLevelOrder, Imaginary, imaginary } from "../scalar/byte"
+import { BITS_PER_BYTE } from "../scalar/binary"
+import { Q_BITS_PER_LEVEL, Q_LEVELS_PER_BYTE, Q_VALUES_PER_LEVEL } from "../scalar/quaternary"
+import { RawCartesianCoord, CartesianCoordinate, TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6 } from "./cartesian"
+import { digitsToBytes, parsePowerScalar, PowerScalar } from "../scalar"
+import { RadixType } from "../scalar/radix"
+import { RADIX_PREFIX } from "../calculator/expression"
+import { Pt } from "pts-math"
 
 // ts types interfaces
 
@@ -29,8 +30,6 @@ export class Tetracoordinate {
   static BITS_PER_BYTE: number = BITS_PER_BYTE
   static LEVELS_PER_BYTE: number = Q_LEVELS_PER_BYTE
   static DEFAULT_MAX_LEVELS: number = Tetracoordinate.LEVELS_PER_BYTE * 1
-
-  static imaginary: imaginary = null
 
   // unit tcoords
   static ZERO: Tetracoordinate = new Tetracoordinate('0')
@@ -63,18 +62,18 @@ export class Tetracoordinate {
       3 = (-√3/2,  1/2)
   ```
    */
-  static unit_to_cartesian: Map<Tetracoordinate, CartesianCoordinate> = new Map([
-    [Tetracoordinate.ZERO, { x: 0, y: 0 }],
-    [Tetracoordinate.ONE, { x: 0, y: 1 }],
-    [Tetracoordinate.TWO, { x: -TRIG_COS_PI_OVER_6, y: -TRIG_SIN_PI_OVER_6 }],
-    [Tetracoordinate.THREE, { x: TRIG_COS_PI_OVER_6, y: -TRIG_SIN_PI_OVER_6 }],
+  static unit_to_cartesian: Map<Tetracoordinate, RawCartesianCoord> = new Map([
+    [Tetracoordinate.ZERO, [0, 0]],
+    [Tetracoordinate.ONE, [0, 1]],
+    [Tetracoordinate.TWO, [-TRIG_COS_PI_OVER_6, -TRIG_SIN_PI_OVER_6 ]],
+    [Tetracoordinate.THREE, [TRIG_COS_PI_OVER_6, -TRIG_SIN_PI_OVER_6]],
 
-    [Tetracoordinate.NONE, { x: 0, y: -1 }],
-    [Tetracoordinate.NTWO, { x: TRIG_COS_PI_OVER_6, y: TRIG_SIN_PI_OVER_6 }],
-    [Tetracoordinate.NTHREE, { x: -TRIG_COS_PI_OVER_6, y: TRIG_SIN_PI_OVER_6 }],
+    [Tetracoordinate.NONE, [0, -1]],
+    [Tetracoordinate.NTWO, [TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6]],
+    [Tetracoordinate.NTHREE, [-TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6]],
 
-    [Tetracoordinate.FOUR, { x: 1, y: 0 }],
-    [Tetracoordinate.NFOUR, { x: -1, y: 0 }]
+    [Tetracoordinate.FOUR, [1, 0]],
+    [Tetracoordinate.NFOUR, [-1, 0]]
   ])
   
   /**
@@ -97,7 +96,7 @@ export class Tetracoordinate {
    * @param powerOffset Offset the default power of `value`.
    */
   constructor(
-    value?: Tetracoordinate | Uint8Array | number[] | string,
+    value?: Tetracoordinate | string | number | PowerScalar | Uint8Array | number[],
     quad_order?: ByteLevelOrder,
     num_levels?: number,
     powerOffset: number = 0,
@@ -109,9 +108,17 @@ export class Tetracoordinate {
       // create tcoord 0
       this.value = parsePowerScalar('0', RadixType.Q, irrational, quad_order)
     }
+    else if (value instanceof PowerScalar) {
+      // create tcoord from power scalar
+      this.value = value
+    }
     else if (typeof value === 'string' || value instanceof String) {
       // create tcoord from quaternary str
       this.value = parsePowerScalar(value as string, RadixType.Q, irrational, quad_order)
+    }
+    else if (typeof value === 'number') {
+      // create tcoord from decimal number
+      this.value = parsePowerScalar(value as number, RadixType.D, irrational, quad_order)
     }
     else if (value instanceof Tetracoordinate) {
       // clone tcoord
@@ -120,12 +127,18 @@ export class Tetracoordinate {
     }
     else if (Array.isArray(value)) {
       // create tcoord from int array
-      this.value = new PowerScalar(
-        digitsToBytes(value, RadixType.Q, quad_order),
-        0,
-        irrational,
-        quad_order
-      )
+      const bytes = digitsToBytes(value, RadixType.Q, quad_order)
+      if (bytes !== Imaginary) {
+        this.value = new PowerScalar(
+          bytes,
+          0,
+          irrational,
+          quad_order
+        )
+      }
+      else {
+        this.value = Imaginary
+      }
     }
     else {
       // create tcoord from bytes
@@ -134,7 +147,11 @@ export class Tetracoordinate {
 
     this.num_levels = (
       num_levels === undefined
-      ? (this.value.digits as Uint8Array).byteLength * Tetracoordinate.LEVELS_PER_BYTE
+      ? (
+        this.value === Imaginary 
+        ? 1 
+        : (this.value.digits as Uint8Array).byteLength * Tetracoordinate.LEVELS_PER_BYTE
+      )
       : num_levels
     )
 
@@ -168,14 +185,14 @@ export class Tetracoordinate {
     if (this.value.levelOrder === ByteLevelOrder.LOW_FIRST) {
       quads.reverse()
     }
-    let vectors: Vector2D[] = new Array(this.num_levels)
+    let vectors: Pt[] = new Array(this.num_levels)
     let level = this.num_levels - 1 + this.value.power
     let level_even: boolean = level % 2 == 0
     for (let i = 0; i < this.num_levels; i++) {
       const q: number = Tetracoordinate.reorientDigit(quads[i], orientation)
 
       // find unit ccoord (level=0)
-      let uc: CartesianCoordinate
+      let uc: RawCartesianCoord
       switch (q) {
         case 0:
           uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.ZERO)
@@ -217,15 +234,15 @@ export class Tetracoordinate {
           throw new Error(`invalid quad ${q}`)
       }
 
-      let v = new Vector2D(uc.x, uc.y)
+      let v = new Pt(uc)
 
       // flip
       if (!level_even) {
-        v.multiplyScalar(-1)
+        v.multiply(-1)
       }
 
       // scale
-      v.multiplyScalar(Math.pow(2, level))
+      v.multiply(Math.pow(2, level))
 
       // add component to vectors
       vectors[i] = v
@@ -237,14 +254,9 @@ export class Tetracoordinate {
       }
     }
 
-    let vector: Vector2D = vectors.reduce((prev: Vector2D, curr: Vector2D) => {
-      return prev.add(curr)
-    })
+    let vector = vectors.reduce((prev, curr) => prev.add(curr))
 
-    return {
-      x: vector.x,
-      y: vector.y
-    }
+    return CartesianCoordinate.fromRaw(vector)
   }
 
   /**
@@ -294,7 +306,7 @@ export class Tetracoordinate {
 
   negateFromCartesian(): Tetracoordinate {
     let negative = Tetracoordinate.fromCartesianCoord(
-      Vector2D.fromObject(this.toCartesianCoord()).multiplyScalar(-1)
+      this.toCartesianCoord().toRaw().multiply(-1)
     )
     this.set(negative)
 
@@ -317,7 +329,7 @@ export class Tetracoordinate {
     let cother = other.toCartesianCoord()
 
     let sum = Tetracoordinate.fromCartesianCoord(
-      { x: cthis.x + cother.x, y: cthis.y + cother.y },
+      CartesianCoordinate.add(cthis, cother),
       Math.min(this.value.power, other.value.power)
     )
     this.set(sum)
@@ -344,7 +356,6 @@ export class Tetracoordinate {
   }
 
   /**
-   * 
    * @returns Array of byte strings (4 quad digits) expressing the nominal value of this tcoord, without power,
    * accorded to internal quad order.
    */
@@ -363,7 +374,7 @@ export class Tetracoordinate {
   /**
    * String representation of this tetracoord instance.
    */
-  toStringOverride(): string {
+  toString(): string {
     return (
       `tcoord(` +
       `bytes=${RADIX_PREFIX}${RadixType.Q}${this.getByteStrs().join('-')} ` +
@@ -384,7 +395,7 @@ export class Tetracoordinate {
    * @returns Equivalent tcoord.
    */
   static fromCartesianCoord(
-    ccoord: CartesianCoordinate | Vector2D,
+    ccoord: RawCartesianCoord | CartesianCoordinate,
     precision: number = undefined,
     quad_order: ByteLevelOrder = undefined,
     orientation: Orientation = undefined
@@ -395,11 +406,11 @@ export class Tetracoordinate {
     precision = (precision === undefined) ? 0 : Math.trunc(precision)
     const min_dist = Math.pow(2, precision) / 2
 
-    let target: Vector2D = ccoord instanceof Vector2D ? ccoord : Vector2D.fromObject(ccoord)
-    let loc: Vector2D = new Vector2D(0, 0)
-    let delta: Vector2D = Vector2D.subtract(target, loc)
+    let target: CartesianCoordinate = ccoord instanceof CartesianCoordinate ? ccoord : CartesianCoordinate.fromRaw(ccoord)
+    let loc: Pt = new Pt(0, 0)
+    let delta: Pt = target.v.$subtract(loc)
     let dist: number = delta.magnitude()
-    let prev_loc: Vector2D, prev_delta: Vector2D, prev_dist: number
+    let prev_loc: Pt, prev_delta: Pt, prev_dist: number
 
     // min safe level needed to reach the target
     let scale: number = Math.ceil(Math.log2(delta.magnitude()))
@@ -417,17 +428,17 @@ export class Tetracoordinate {
     }
 
     let angle_ds: number[] = new Array(3)
-    let step: Vector2D
+    let step: Pt
 
-    const uv_one: Vector2D = Vector2D.fromObject(Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.ONE))
-    const uv_two: Vector2D = Vector2D.fromObject(Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.TWO))
-    const uv_three: Vector2D = Vector2D.fromObject(Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.THREE))
+    const uv_one: Pt = new Pt(Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.ONE))
+    const uv_two: Pt = new Pt(Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.TWO))
+    const uv_three: Pt = new Pt(Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.THREE))
 
     while (dist > min_dist && power >= precision) {
       // determine closest tcoord nonzero unit vector (direction)
-      angle_ds[0] = Vector2D.angleBetween(delta, Vector2D.multiplyScalar(uv_one, flip))
-      angle_ds[1] = Vector2D.angleBetween(delta, Vector2D.multiplyScalar(uv_two, flip))
-      angle_ds[2] = Vector2D.angleBetween(delta, Vector2D.multiplyScalar(uv_three, flip))
+      angle_ds[0] = delta.angleBetween(uv_one.$multiply(flip))
+      angle_ds[1] = delta.angleBetween(uv_two.$multiply(flip))
+      angle_ds[2] = delta.angleBetween(uv_three.$multiply(flip))
 
       let angle_min = Math.min(...angle_ds)
       let quad: number
@@ -450,7 +461,7 @@ export class Tetracoordinate {
 
       // scale step unit vector
       let leg = Math.pow(2, power)
-      step.multiplyScalar(leg * flip)
+      step.multiply(leg * flip)
 
       // update loc
       prev_loc = loc.clone()
@@ -458,7 +469,7 @@ export class Tetracoordinate {
       prev_dist = dist
 
       loc.add(step)
-      delta = Vector2D.subtract(target, loc)
+      delta = target.v.$subtract(loc)
       dist = delta.magnitude()
       /*
       console.log(
@@ -478,7 +489,7 @@ export class Tetracoordinate {
         loc = prev_loc
         delta = prev_delta
         dist = prev_dist
-        step.zero()
+        step.fill(0)
         quads.push(0)
 
         // flip unit vectors for next level
@@ -577,9 +588,6 @@ export class Tetracoordinate {
     return i
   }
 }
-
-// Tetracoordinate overrides
-Tetracoordinate.prototype.toString = Tetracoordinate.prototype.toStringOverride
 
 // exports
 

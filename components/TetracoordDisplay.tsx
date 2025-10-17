@@ -14,8 +14,8 @@ function TetracoordDisplay(props: TetracoordDisplayProps) {
         set_tcoord_bytes(props.tcoord.getQuadStrs().join(''))
 
         let ccoord = props.tcoord.toCartesianCoord()
-        let cx = Math.round(ccoord.x * 100000) / 100000
-        let cy = Math.round(ccoord.y * 100000) / 100000
+        let cx = Math.round(ccoord.v.x * 100000) / 100000
+        let cy = Math.round(ccoord.v.y * 100000) / 100000
         set_tcoord_cmps(`${cx} , ${cy}`)
     }, [props.tcoord])
 

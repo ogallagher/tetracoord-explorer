@@ -1,8 +1,10 @@
 import { parse, nary, token, err, unary } from "subscript"
 import { PREC_ACCESS, PREC_TOKEN } from "subscript/const"
-import { TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6 } from "../vector2d"
-import { parsePowerScalar, PowerScalar, RawScalar } from "../scalar"
+import CartesianCoordinate, { TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6 } from "../vector/cartesian"
+import { parsePowerScalar, PowerScalar } from "../scalar"
 import { RadixType } from "../scalar/radix"
+import { VectorType } from "../vector"
+import Tetracoordinate from "../vector/tetracoordinate"
 
 export const RADIX_PREFIX = '0'
 export const RADIX_PREFIX_OP = '@'
@@ -11,6 +13,9 @@ export const IRR_SUFFIX_DOTS = '...'
 export const IRR_SUFFIX_OP = '~'
 export const COSPI6_CONST = 'cospi6'
 export const SINPI6_CONST = 'sinpi6'
+export const VEC_ACCESS_OP = '[]'
+export const ITEM_DELIM_OP = ','
+export const STMT_DELIM_OP = ';'
 
 // parser handle literal number radix prefix as <radix> @ <raw-fractional-value>
 nary(RADIX_PREFIX_OP, PREC_ACCESS)
@@ -20,7 +25,8 @@ unary(IRR_SUFFIX_OP, PREC_ACCESS+1, true)
 token(COSPI6_CONST, PREC_TOKEN, a => a ? err() : [, TRIG_COS_PI_OVER_6])
 token(SINPI6_CONST, PREC_TOKEN, a => a ? err() : [, TRIG_SIN_PI_OVER_6])
 
-export type ExpressionLeaf = string|RawScalar|PowerScalar|null|undefined
+export type ExpressionValue = number|PowerScalar|Tetracoordinate|CartesianCoordinate
+export type ExpressionLeaf = ExpressionValue|string|null|undefined
 export type ExpressionTree = (ExpressionLeaf|ExpressionTree)[]
 
 /**
@@ -89,24 +95,60 @@ function parseScalarNode(node: ExpressionTree, radixType: RadixType): PowerScala
   }
 }
 
-// TODO extend parseExpressionTree to handle execute during traversal 
-function parseExpressionTree(node: ExpressionTree) {
+/**
+ * Both parses and evaluates the expression abstract syntax tree from the given root node.
+ */
+function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixType.D): ExpressionValue {
   const op = node[0]
   const a = node[1]
   const b = node[2]
 
   if (op === RADIX_PREFIX_OP) {
-    // convert [@ a=<radix-type> b=<scalar-node>] to [ PowerScalar]
+    // convert [@ a=<radix-type> b=<scalar-node>] to PowerScalar
     const r = a as RadixType
-    const v = parseScalarNode(b as ExpressionTree, r)
-    return [, v]
+    return parseScalarNode(b as ExpressionTree, r)
+  }
+  else if (op === IRR_SUFFIX_OP) {
+    // convert implied radix [~ a=<scalar-node>] to PowerScalar
+    return parseScalarNode(node, radixCtx)
+  }
+  else if (op === VEC_ACCESS_OP && (a === VectorType.CCoord || a === VectorType.TCoord)) {
+    if (a === VectorType.CCoord) {
+      // convert ['[]' a='cc' b=[',' <x> <y>]] to CartesianCoordinate
+      const _x = parseExpressionTree(b[1], RadixType.D) as number
+      const _y = parseExpressionTree(b[2], RadixType.D) as number
+      return new CartesianCoordinate(_x, _y)
+    }
+    else {
+      // convert ['[]' a='tc' b=[ <scalar-node>]] to Tetracoordinate
+      const _b = parseExpressionTree(b as ExpressionTree, RadixType.Q) as number|PowerScalar
+      return new Tetracoordinate(_b)
+    }
+  }
+  else if (op !== undefined) {
+    // operator expression
+    const isLeaf = (n: ExpressionLeaf|ExpressionTree) => !Array.isArray(n) || n[0] === undefined
+
+    const _a = isLeaf(a) ? a : parseExpressionTree(a as ExpressionTree)
+
+    if (b === undefined) {
+      // unary operation
+      throw new Error(`unsupported unary operation ${[op, _a]}`)
+    }
+    else {
+      // binary operation
+      const _b = isLeaf(b) ? b : parseExpressionTree(b as ExpressionTree)
+
+      throw new Error(`unsupported binary operation ${[op, _a, _b]}`)
+    }
   }
   else {
-    return node
+    // literal
+    return a as ExpressionValue
   }
 }
 
-export function parseExpression(expr: string) {
+export function evalExpression(expr: string) {
   expr = preparseExpression(expr)
   
   const tree = parseExpressionTree(parse(expr))
