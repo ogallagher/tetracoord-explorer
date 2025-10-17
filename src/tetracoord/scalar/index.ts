@@ -79,19 +79,20 @@ export class PowerScalar {
   }
 
   /**
-   * Format as scalar literal.
+   * Format nominal digits without radix prefix or irrational suffix.
+   * 
    * @param radix 
    */
-  toString(radix?: RadixType) {
+  toDigitString(radix?: RadixType, showPower: boolean = true): string {
     const radixCurrent: RadixType = (typeof this.digits === 'number') ? RadixType.D : RadixType.B
     radix = radix === undefined ? radixCurrent : radix
     const radixValue = radixTypeToValue(radix)
 
     // format digits
-    let digitsStr: string
+    let digitStr: string
     if (radix !== radixCurrent) {
       if (radixCurrent === RadixType.D) {
-        digitsStr = (this.digits as number).toString(radixValue)
+        digitStr = (this.digits as number).toString(radixValue)
       }
       else {
         const bytes = (this.digits as Uint8Array)
@@ -101,44 +102,57 @@ export class PowerScalar {
           byteStrs[index] = byte.toString(radixValue)
         })
 
-        digitsStr = byteStrs.join('')
+        digitStr = byteStrs.join('')
       }
     }
 
-    // format negative power with decimal point
-    if (this.power < 0) {
-      const pointIndex = (
-        this.levelOrder === ByteLevelOrder.HIGH_FIRST
-        ? digitsStr.length - this.power
-        : this.power
-      )
-
-      digitsStr = digitsStr.substring(0, pointIndex) + '.' + digitsStr.substring(pointIndex)
-    }
-    // format positive power with trailing least significant digit
-    else if (this.power > 0) {
-      const leastTrail: string = (
-        new Array(this.power)
-        .fill(
-          this.irrational
-          ? digitsStr[this.levelOrder === ByteLevelOrder.HIGH_FIRST ? digitsStr.length-1 : 0]
-          : '0'
+    if (showPower) {
+      // format negative power with decimal point
+      if (this.power < 0) {
+        const pointIndex = (
+          this.levelOrder === ByteLevelOrder.HIGH_FIRST
+          ? digitStr.length - this.power
+          : this.power
         )
-        .join('')
-      )
-      
-      digitsStr = (
-        this.levelOrder === ByteLevelOrder.HIGH_FIRST
-        ? digitsStr + leastTrail
-        : leastTrail + digitsStr
-      )
+
+        digitStr = digitStr.substring(0, pointIndex) + '.' + digitStr.substring(pointIndex)
+      }
+      // format positive power with trailing least significant digit
+      else if (this.power > 0) {
+        const leastTrail: string = (
+          new Array(this.power)
+          .fill(
+            this.irrational
+            ? digitStr[this.levelOrder === ByteLevelOrder.HIGH_FIRST ? digitStr.length-1 : 0]
+            : '0'
+          )
+          .join('')
+        )
+        
+        digitStr = (
+          this.levelOrder === ByteLevelOrder.HIGH_FIRST
+          ? digitStr + leastTrail
+          : leastTrail + digitStr
+        )
+      }
     }
+
+    return digitStr
+  }
+
+  /**
+   * Format as scalar literal.
+   * 
+   * @param radix 
+   */
+  toString(radix?: RadixType) {
+    const digitStr = this.toDigitString(radix)
 
     // format irrational
     const irrationalSuffix = (this.irrational ? IRR_SUFFIX_I : '')
 
     return (
-      `${RADIX_PREFIX}${radix}${digitsStr}${irrationalSuffix}`
+      `${RADIX_PREFIX}${radix}${digitStr}${irrationalSuffix}`
     )
   }
 }

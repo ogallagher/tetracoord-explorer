@@ -11,8 +11,9 @@ import { Q_BITS_PER_LEVEL, Q_LEVELS_PER_BYTE, Q_VALUES_PER_LEVEL } from "../scal
 import { RawCartesianCoord, CartesianCoordinate, TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6 } from "./cartesian"
 import { digitsToBytes, parsePowerScalar, PowerScalar } from "../scalar"
 import { RadixType } from "../scalar/radix"
-import { RADIX_PREFIX } from "../calculator/syntax"
+import { VEC_ACCESS_OP } from "../calculator/syntax"
 import { Pt } from "pts-math"
+import { VectorType } from "."
 
 // ts types interfaces
 
@@ -46,21 +47,21 @@ export class Tetracoordinate {
 
   /**
    * tcoord to cartesian unit map
-   
-  ```txt
-  up/default
-      0 = (    0,    0)
-      1 = (    0,    1)
-      2 = (-√3/2, -1/2)
-      3 = ( √3/2, -1/2)
-      4 = (    1,    0) imaginary, used for orientation
-
-  down
-      0 = (    0,    0)
-      1 = (    0,   -1)
-      2 = ( √3/2,  1/2)
-      3 = (-√3/2,  1/2)
-  ```
+   *
+   * ```txt
+   * up/default
+   *    0 = (    0,    0)
+   *    1 = (    0,    1)
+   *    2 = (-√3/2, -1/2)
+   *    3 = ( √3/2, -1/2)
+   *    4 = (    1,    0) imaginary, used for orientation
+   *
+   * down
+   *    0 = (    0,    0)
+   *    1 = (    0,   -1)
+   *    2 = ( √3/2,  1/2)
+   *    3 = (-√3/2,  1/2)
+   * ```
    */
   static unit_to_cartesian: Map<Tetracoordinate, RawCartesianCoord> = new Map([
     [Tetracoordinate.ZERO, [0, 0]],
@@ -291,18 +292,21 @@ export class Tetracoordinate {
    * All of the following negated values for nonzero unit tcoord z are equivalent. This
    * method uses the first.
    * 
+   * **Formula for single level**
+   * 
+   * ```txt
+   * -z =  0.zi <-- [-power & -irrational]
+   *       x.yi
+   *       y.xi
+   *      zx.yi
+   *      zy.xi
+   *      z0.zi
    * ```
-   * -z =  0.z... <-- [-power & -irrational]
-   *       x.y...
-   *       y.x...
-   *      zx.y...
-   *      zy.x...
-   *      z0.z...
-   * ```
+   * 
+   * @returns `this`
    */
   negate(): Tetracoordinate {
     throw new Error('native negate not yet implemented')
-    return this
   }
 
   negateFromCartesian(): Tetracoordinate {
@@ -314,9 +318,14 @@ export class Tetracoordinate {
     return negative
   }
 
+  /**
+   * 
+   * @param other 
+   * 
+   * @returns `this`
+   */
   add(other: Tetracoordinate): Tetracoordinate {
     throw new Error('native add not yet implemented')
-    return this
   }
 
   /**
@@ -343,7 +352,7 @@ export class Tetracoordinate {
    * according to internal quad order.
    */
   getQuadStrs(): string[] {
-    let quads = this.getByteStrs().flat().join('').split('')
+    let quads = this.value.toDigitString(RadixType.Q, false).split('')
 
     // remove leading/trailing zeros to match populated levels
     if (quads.length > this.num_levels) {
@@ -357,32 +366,22 @@ export class Tetracoordinate {
   }
 
   /**
-   * @returns Array of byte strings (4 quad digits) expressing the nominal value of this tcoord, without power,
-   * accorded to internal quad order.
-   */
-  getByteStrs(): string[] {
-    const bytes = this.value.digits as Uint8Array
-    let byte_strs_q = new Array(bytes.byteLength)
-    for (let i = 0; i < bytes.byteLength; i++) {
-      byte_strs_q[i] = bytes.at(i)
-        .toString(4)
-        .padStart(Tetracoordinate.LEVELS_PER_BYTE, '0')
-    }
-
-    return byte_strs_q
-  }
-
-  /**
    * String representation of this tetracoord instance.
    */
-  toString(): string {
-    return (
-      `tcoord(` +
-      `bytes=${RADIX_PREFIX}${RadixType.Q}${this.getByteStrs().join('-')} ` +
-      `power=${this.value.power} order=${this.value.levelOrder} levels=${this.num_levels} ` +
-      `irrational=${this.value.irrational}` +
-      `)`
-    )
+  toString(showOrder: boolean = false, showNumLevels: boolean = false): string {
+    let s: string[] = [
+      `${VectorType.TCoord}${VEC_ACCESS_OP[0]}`,
+      this.value.toString(RadixType.Q)
+    ]
+
+    if (showOrder) {
+      s.push(` order=${this.value.levelOrder}`)
+    }
+    if (showNumLevels) {
+      s.push(` levels=${this.num_levels}`)
+    }
+
+    return s.join('') + `${VEC_ACCESS_OP[1]}`
   }
 
   /**
