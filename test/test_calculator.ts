@@ -4,6 +4,7 @@ import { ExpressionValue, evalExpression, preparseExpression } from "../src/tetr
 import CartesianCoordinate, { TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6 } from "../src/tetracoord/vector/cartesian"
 import { PowerScalar } from "../src/tetracoord/scalar"
 import { Tetracoordinate } from "../src/tetracoord"
+import { RadixType } from "../src/tetracoord/scalar/radix"
 
 /**
  * Calls `evalExpression` with additional error details on failure.
@@ -49,7 +50,7 @@ describe('tetracoord.calculator', () => {
           // radix prefix
           ['0', 0],
           ['0b01', new PowerScalar({digits: new Uint8Array([0b01])})],
-          ['0q31', new PowerScalar({digits: new Uint8Array([0b1101])})],
+          ['0q31', new PowerScalar({digits: new Uint8Array([0b1101]), radix: RadixType.Q})],
           ['0d95', new PowerScalar({digits: 95})],
   
           // trigonometric constant
@@ -58,11 +59,11 @@ describe('tetracoord.calculator', () => {
   
           // irrational
           ['0d1.5i', new PowerScalar({digits: 15, power: -1, irrational: true})],
-          ['0q320.1i', new PowerScalar({digits: new Uint8Array([0b11100001]), power: -1, irrational: true})],
-          ['0q320.1...', new PowerScalar({digits: new Uint8Array([0b11100001]), power: -1, irrational: true})],
-          ['0q320.0i', new PowerScalar({digits: new Uint8Array([0b111000]), power: 0, irrational: false})],
-          ['0q320.01i', new PowerScalar({digits: new Uint8Array([0b11, 0b10000001]), power: -2, irrational: true})],
-          ['-0q320.1i', new PowerScalar({digits: new Uint8Array([0b11100001]), power: -1, sign: -1, irrational: true})],
+          ['0q320.1i', new PowerScalar({digits: new Uint8Array([0b11100001]), radix: RadixType.Q, power: -1, irrational: true})],
+          ['0q320.1...', new PowerScalar({digits: new Uint8Array([0b11100001]), radix: RadixType.Q, power: -1, irrational: true})],
+          ['0q320.0i', new PowerScalar({digits: new Uint8Array([0b111000]), radix: RadixType.Q, power: 0, irrational: false})],
+          ['0q320.01i', new PowerScalar({digits: new Uint8Array([0b11, 0b10000001]), radix: RadixType.Q, power: -2, irrational: true})],
+          ['-0q320.1i', new PowerScalar({digits: new Uint8Array([0b11100001]), radix: RadixType.Q, power: -1, sign: -1, irrational: true})],
         ]) {
           actual = testEvalExpression(input as string)
           assert.deepStrictEqual(actual, expected, `mismatch for input=${input}`)
@@ -70,7 +71,7 @@ describe('tetracoord.calculator', () => {
       })
   
       it('evals tcoord vector literals', () => {
-        let actual: ExpressionValue
+        let actual: Tetracoordinate
   
         for (let [input, expected] of [
           ['tc[0q31]', new Tetracoordinate('31')],
@@ -80,13 +81,17 @@ describe('tetracoord.calculator', () => {
           ['tc[0q312.1i]', new Tetracoordinate('3121', undefined, undefined, -1, true)],
           ['tc[-0q312.1i]', new Tetracoordinate('-3121', undefined, undefined, -1, true)]
         ]) {
-          actual = testEvalExpression(input as string)
-          assert.deepStrictEqual(actual, expected, `mismatch for input=${input} actual=${actual} expected=${expected}`)
+          actual = testEvalExpression(input as string) as Tetracoordinate
+          assert.deepStrictEqual(
+            actual.value.toString(RadixType.Q), 
+            (expected as Tetracoordinate).value.toString(), 
+            `mismatch for input=${input} actual=${actual} expected=${expected}`
+          )
         }
       })
   
       it('evals ccoord vector literals', () => {
-        let actual: ExpressionValue
+        let actual: CartesianCoordinate
   
         for (let [input, expected] of [
           ['cc[5, 6.1]', new CartesianCoordinate(5, 6.1)],
@@ -99,8 +104,8 @@ describe('tetracoord.calculator', () => {
             )
           ]
         ]) {
-          actual = testEvalExpression(input as string)
-          assert.deepStrictEqual(actual, expected, `mismatch for input=${input}`)
+          actual = testEvalExpression(input as string) as CartesianCoordinate
+          assert.deepStrictEqual(actual.toString(), (expected as CartesianCoordinate).toString(), `mismatch for input=${input}`)
         }
       })
     })

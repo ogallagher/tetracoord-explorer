@@ -1,6 +1,8 @@
 import { PtLike, Pt } from "pts-math"
 import { parsePowerScalar, PowerScalar } from "../scalar"
 import { RadixType } from "../scalar/radix"
+import { VectorType } from "./const"
+import { ITEM_DELIM_OP, VEC_ACCESS_OP } from "../calculator/symbol"
 
 export const TRIG_PI = Math.PI
 export const TRIG_PI_OVER_2 = Math.PI / 2
@@ -64,6 +66,18 @@ export class CartesianCoordinate {
     this.y.negate()
 
     return this
+  }
+
+  toString(radix: RadixType = RadixType.D) {
+    let out: string[] = [
+      VectorType.CCoord,
+      VEC_ACCESS_OP[0],
+      this.x.toString(radix),
+      ITEM_DELIM_OP,
+      this.y.toString(radix),
+      VEC_ACCESS_OP[1]
+    ]
+    return out.join('')
   }
 
   static fromRaw(v: RawCartesianCoord): CartesianCoordinate {
