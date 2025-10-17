@@ -2,9 +2,8 @@ import { describe, it } from "mocha"
 import assert from "node:assert"
 import { ExpressionValue, evalExpression, preparseExpression } from "../src/tetracoord/calculator/expression"
 import CartesianCoordinate, { TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6 } from "../src/tetracoord/vector/cartesian"
-import { parsePowerScalar, PowerScalar } from "../src/tetracoord/scalar"
+import { PowerScalar } from "../src/tetracoord/scalar"
 import { Tetracoordinate } from "../src/tetracoord"
-import { RadixType } from "../src/tetracoord/scalar/radix"
 
 /**
  * Calls `evalExpression` with additional error details on failure.
@@ -49,21 +48,21 @@ describe('tetracoord.calculator', () => {
         for (let [input, expected] of [
           // radix prefix
           ['0', 0],
-          ['0b01', new PowerScalar(new Uint8Array([0b01]))],
-          ['0q31', new PowerScalar(new Uint8Array([0b1101]))],
-          ['0d95', new PowerScalar(95)],
+          ['0b01', new PowerScalar({digits: new Uint8Array([0b01])})],
+          ['0q31', new PowerScalar({digits: new Uint8Array([0b1101])})],
+          ['0d95', new PowerScalar({digits: 95})],
   
           // trigonometric constant
           ['cospi6', TRIG_COS_PI_OVER_6],
           ['sinpi6', TRIG_SIN_PI_OVER_6],
   
           // irrational
-          ['0d1.5i', new PowerScalar(15, -1, undefined, true)],
-          ['0q320.1i', new PowerScalar(new Uint8Array([0b11100001]), -1, undefined, true)],
-          ['0q320.1...', new PowerScalar(new Uint8Array([0b11100001]), -1, undefined, true)],
-          ['0q320.0i', new PowerScalar(new Uint8Array([0b111000]), 0, undefined, false)],
-          ['0q320.01i', new PowerScalar(new Uint8Array([0b11, 0b10000001]), -2, undefined, true)],
-          ['-0q320.1i', new PowerScalar(new Uint8Array([0b11100001]), -1, -1, true)],
+          ['0d1.5i', new PowerScalar({digits: 15, power: -1, irrational: true})],
+          ['0q320.1i', new PowerScalar({digits: new Uint8Array([0b11100001]), power: -1, irrational: true})],
+          ['0q320.1...', new PowerScalar({digits: new Uint8Array([0b11100001]), power: -1, irrational: true})],
+          ['0q320.0i', new PowerScalar({digits: new Uint8Array([0b111000]), power: 0, irrational: false})],
+          ['0q320.01i', new PowerScalar({digits: new Uint8Array([0b11, 0b10000001]), power: -2, irrational: true})],
+          ['-0q320.1i', new PowerScalar({digits: new Uint8Array([0b11100001]), power: -1, sign: -1, irrational: true})],
         ]) {
           actual = testEvalExpression(input as string)
           assert.deepStrictEqual(actual, expected, `mismatch for input=${input}`)
@@ -95,8 +94,8 @@ describe('tetracoord.calculator', () => {
           [
             'cc[-0q11i, 0q12.1]', 
             new CartesianCoordinate(
-              new PowerScalar(new Uint8Array([0b0101]), undefined, -1, true), 
-              new PowerScalar(new Uint8Array([0b011001]), -1)
+              new PowerScalar({digits: new Uint8Array([0b0101]), sign: -1, irrational: true}), 
+              new PowerScalar({digits: new Uint8Array([0b011001]), power: -1})
             )
           ]
         ]) {
@@ -114,17 +113,17 @@ describe('tetracoord.calculator', () => {
           for (let [input, expected] of [
             // subtract
             ['7 - 0.5', 6.5],
-            ['0d7 - 0d0.5', new PowerScalar(6.5)],
+            ['0d7 - 0d0.5', new PowerScalar({digits: 6.5})],
             ['cospi6 - sinpi6', TRIG_COS_PI_OVER_6 - TRIG_SIN_PI_OVER_6],
             ['1 - sinpi6', 0.5],
-            ['0q3210 - 0q0001', new PowerScalar(new Uint8Array([0b11100011]))],
-            ['0q3210 - -0q0001', new PowerScalar(new Uint8Array([0b11100101]))],
+            ['0q3210 - 0q0001', new PowerScalar({digits: new Uint8Array([0b11100011])})],
+            ['0q3210 - -0q0001', new PowerScalar({digits: new Uint8Array([0b11100101])})],
 
             // add
             ['6.5 + 0.5', 7],
-            ['0q12.2 + 0.5', new PowerScalar(new Uint8Array([0b0111]))], // 0q12.2 + 0q0.2 = 0q13
+            ['0q12.2 + 0.5', new PowerScalar({digits: new Uint8Array([0b0111])})], // 0q12.2 + 0q0.2 = 0q13
             ['-sinpi6 + -sinpi6', -1],
-            ['0q32103111 + 0q00200222', new PowerScalar(new Uint8Array([0b11101100, 255]))],
+            ['0q32103111 + 0q00200222', new PowerScalar({digits: new Uint8Array([0b11101100, 255])})],
           ]) {
             actual = testEvalExpression(input as string)
             assert.deepStrictEqual(actual, expected, `mismatch for input=${input} actual=${actual} expected=${expected}`)

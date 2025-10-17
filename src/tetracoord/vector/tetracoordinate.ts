@@ -130,13 +130,13 @@ export class Tetracoordinate {
       // create tcoord from int array
       const bytes = digitsToBytes(value, RadixType.Q, quad_order)
       if (bytes !== Imaginary) {
-        this.value = new PowerScalar(
-          bytes,
-          0,
-          undefined,
+        this.value = new PowerScalar({
+          digits: bytes,
+          radix: RadixType.Q,
+          power: 0,
           irrational,
-          quad_order
-        )
+          levelOrder: quad_order
+        })
       }
       else {
         this.value = Imaginary
@@ -144,7 +144,7 @@ export class Tetracoordinate {
     }
     else {
       // create tcoord from bytes
-      this.value = new PowerScalar(value, 0, undefined, irrational, quad_order)
+      this.value = new PowerScalar({digits: value, radix: RadixType.Q, power: 0, irrational, levelOrder: quad_order})
     }
 
     this.num_levels = (
