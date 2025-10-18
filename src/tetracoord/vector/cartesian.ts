@@ -21,7 +21,13 @@ export class CartesianCoordinate {
    * Vector value expressed in simple scalar numbers.
    */
   v: Pt
+  /**
+   * Vector x component as a power scalar.
+   */
   x: PowerScalar
+  /**
+   * Vector x component as a power scalar.
+   */
   y: PowerScalar
 
   constructor(x: number|PowerScalar, y: number|PowerScalar) {
@@ -96,8 +102,14 @@ export class CartesianCoordinate {
     return this.fromRaw(a.v.$multiply(s))
   }
 
-  static angleBetween(a: CartesianCoordinate, b: CartesianCoordinate): number {
-    let da = Math.abs(a.v.angleBetween(b.v))
+  /**
+   * @returns The _normalized_ angle (in radians) between 2 vectors. Value is always positive and less than PI (acute).
+   */
+  static angleBetween(a: CartesianCoordinate|Pt, b: CartesianCoordinate|Pt): number {
+    const av = (a instanceof CartesianCoordinate) ? a.v : a
+    const bv = (b instanceof CartesianCoordinate) ? b.v : b
+
+    let da = Math.abs(av.angleBetween(bv))
     if (da > TRIG_PI) {
       da = TRIG_2_PI - da
     }

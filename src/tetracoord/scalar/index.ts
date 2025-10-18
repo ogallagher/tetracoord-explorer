@@ -3,16 +3,17 @@ import { B_BITS_PER_LEVEL, B_LEVELS_PER_BYTE, B_VALUES_PER_LEVEL, BITS_PER_BYTE 
 import { Q_BITS_PER_LEVEL, Q_LEVELS_PER_BYTE, Q_VALUES_PER_LEVEL } from "./quaternary"
 import { RadixType, radixTypeToValue } from "./radix"
 import { IRR_SUFFIX_I, NEG_OP, RADIX_PREFIX, WHOL_FRAC_DELIM } from "../calculator/symbol"
+import { RawScalar, RawScalarType, Sign } from "./const"
 
-export type RawScalar = number|Uint8Array
-export enum RawScalarType {
-  Number = 'number',
-  Bytes = 'bytes'
-}
-
+/**
+ * Represents a scalar value stored with a custom radix. 
+ * 
+ * Decimal values are stored as positive integers, and non decimal as byte arrays (`Uint8Array`).
+ * Other attributes (ex. {@linkcode PowerScalar.radix radix}, {@linkcode PowerScalar.power power}) are stored separately in order to retrieve the raw value.
+ */
 export class PowerScalar {
   /**
-   * If decimal, raw integer. If quaternary or binary, byte array.
+   * If decimal, raw positive integer. If quaternary or binary, byte array.
    */
   digits: RawScalar
   /**
@@ -23,7 +24,10 @@ export class PowerScalar {
    * Number of levels to shift the decimal point. Level shift is bit shift multiplied by bits per level, determined by the radix.
    */
   power: number
-  sign: number
+  /**
+   * The sign as `1` or `-1`.
+   */
+  sign: Sign
   /**
    * Whether least significant digit repeats infinitely as fractional digits after decimal point.
    */
@@ -34,7 +38,7 @@ export class PowerScalar {
     digits: RawScalar
     radix?: RadixType
     power?: number
-    sign?: number
+    sign?: Sign
     irrational?: boolean 
     levelOrder?: ByteLevelOrder
   }) {
@@ -192,21 +196,22 @@ export class PowerScalar {
       b: typeof b === 'number' ? b : b.toNumber()
     }
 
-    const t = {
+    const tr = {
       at: getRawScalarType(a),
-      bt: getRawScalarType(b)
+      bt: getRawScalarType(b),
+      ar: getRadix(a),
+      br: getRadix(b)
     }
 
-    return {...v, ...t}
+    return {...v, ...tr}
   }
 
   /**
    * Add scalars. 
    * 
-   * Output {@linkcode RawScalarType representation} is determined by left operand. 
+   * Output {@linkcode RadixType format} is determined by left operand. 
    * 
-   * Currently implemented by converting to raw numbers before adding, but if both operands are {@linkcode RawScalarType.Bytes}, then bitwise `|`
-   * might be more efficient.
+   * Currently implemented by converting to raw numbers before adding.
    * 
    * // TODO handle irrational
    * 
@@ -221,7 +226,7 @@ export class PowerScalar {
       return new PowerScalar({ digits: c })
     }
     else {
-      return parsePowerScalar(c.toString(2), RadixType.B, undefined)
+      return parsePowerScalar(c.toString(radixTypeToValue(n.ar)), n.ar, undefined)
     }
   }
 
@@ -238,13 +243,17 @@ export class PowerScalar {
       return new PowerScalar({ digits: c })
     }
     else {
-      return parsePowerScalar(c.toString(2), RadixType.B, undefined)
+      return parsePowerScalar(c.toString(radixTypeToValue(n.ar)), n.ar, undefined)
     }
   }
 }
 
 export const getDefaultRadix = (n: RawScalar|PowerScalar): RadixType => (
   typeof (n instanceof PowerScalar ? n.digits : n) === 'number' ? RadixType.D : RadixType.B
+)
+
+export const getRadix = (n: number|PowerScalar): RadixType => (
+  n instanceof PowerScalar ? n.radix : RadixType.D
 )
 
 export const getRawScalarType = (n: RawScalar|PowerScalar) => (
@@ -357,7 +366,7 @@ export function parseRawDigits(rawNum: number|string, levelOrder: ByteLevelOrder
   )
 
   // extract sign
-  let sign = rawStr.startsWith(NEG_OP) ? -1 : 1
+  let sign: Sign = rawStr.startsWith(NEG_OP) ? -1 : 1
   if (sign === -1) {
     rawStr = rawStr.substring(1)
   }

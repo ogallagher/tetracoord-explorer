@@ -8,6 +8,9 @@ export enum Orientation {
   DEFAULT = UP
 }
 
+/**
+ * Vector types.
+ */
 export enum VectorType {
   /**
    * Cartesian coordinate.

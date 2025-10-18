@@ -90,8 +90,9 @@ export class Tetracoordinate {
   num_levels: number
 
   /**
-   * @param value 
-   * @param quad_order Order that the quad digits will be stored in the byte array.
+   * @param value Value expressed as another `Tetracoordinate`, a quaternary digit string, a decimal number, a `PowerScalar`, a (binary) byte array, 
+   * or an array of quaternary digit integers.
+   * @param quad_order Order that the quad digits will be stored in the byte array, if not done already in `value`.
    * @param num_levels Number of significant quaternary digits. Only needed if providing a byte array
    * that could have leading/trailing insignificant zeros.
    * @param powerOffset Offset the default power of `value`.
@@ -152,7 +153,7 @@ export class Tetracoordinate {
       ? (
         this.value === Imaginary 
         ? 1 
-        : (this.value.digits as Uint8Array).byteLength * Tetracoordinate.LEVELS_PER_BYTE
+        : this.getQuadStrs().length
       )
       : num_levels
     )
@@ -237,7 +238,7 @@ export class Tetracoordinate {
           break
 
         default:
-          throw new Error(`invalid quad ${q}`)
+          throw new Error(`invalid quad[${i}<${this.num_levels}]=${q} in ${this}`)
       }
 
       let v = new Pt(uc)
@@ -374,8 +375,8 @@ export class Tetracoordinate {
   getQuadStrs(): string[] {
     let quads = this.value.toDigitString(RadixType.Q, false).split('')
 
-    // remove leading/trailing zeros to match populated levels
     if (quads.length > this.num_levels) {
+      // remove leading/trailing zeros to match populated levels
       let count: number = quads.length - this.num_levels
       let start: number = (this.value.levelOrder === ByteLevelOrder.HIGH_FIRST) ? 0 : quads.length - count
 
@@ -388,10 +389,10 @@ export class Tetracoordinate {
   /**
    * String representation of this tetracoord instance.
    */
-  toString(showOrder: boolean = false, showNumLevels: boolean = false): string {
+  toString(radix: RadixType = RadixType.Q, showOrder: boolean = false, showNumLevels: boolean = false): string {
     let s: string[] = [
       `${VectorType.TCoord}${VEC_ACCESS_OP[0]}`,
-      this.value.toString(RadixType.Q)
+      this.value.toString(radix)
     ]
 
     if (showOrder) {
@@ -416,15 +417,12 @@ export class Tetracoordinate {
    */
   static fromCartesianCoord(
     ccoord: RawCartesianCoord | CartesianCoordinate,
-    precision: number = undefined,
-    quad_order: ByteLevelOrder = undefined,
-    orientation: Orientation = undefined
+    precision: number = 0,
+    quad_order: ByteLevelOrder = ByteLevelOrder.DEFAULT,
+    orientation: Orientation = Orientation.DEFAULT
   ): Tetracoordinate {
-    quad_order = (quad_order === undefined) ? ByteLevelOrder.DEFAULT : quad_order
-
-    // dist from cell centroid to edge is 1/2 at level 0
-    precision = (precision === undefined) ? 0 : Math.trunc(precision)
-    const min_dist = Math.pow(2, precision) / 2
+    precision = Math.trunc(precision)
+    const min_dist = this.cellRadius(precision)
 
     let target: CartesianCoordinate = ccoord instanceof CartesianCoordinate ? ccoord : CartesianCoordinate.fromRaw(ccoord)
     let loc: Pt = new Pt(0, 0)
@@ -456,9 +454,9 @@ export class Tetracoordinate {
 
     while (dist > min_dist && power >= precision) {
       // determine closest tcoord nonzero unit vector (direction)
-      angle_ds[0] = delta.angleBetween(uv_one.$multiply(flip))
-      angle_ds[1] = delta.angleBetween(uv_two.$multiply(flip))
-      angle_ds[2] = delta.angleBetween(uv_three.$multiply(flip))
+      angle_ds[0] = CartesianCoordinate.angleBetween(delta, uv_one.$multiply(flip))
+      angle_ds[1] = CartesianCoordinate.angleBetween(delta, uv_two.$multiply(flip))
+      angle_ds[2] = CartesianCoordinate.angleBetween(delta, uv_three.$multiply(flip))
 
       let angle_min = Math.min(...angle_ds)
       let quad: number
@@ -594,6 +592,16 @@ export class Tetracoordinate {
     }
 
     return i
+  }
+
+  /**
+   * @param level Level of scale/precision, quaternary digit place value. Signed integer.
+   * @returns Min distance from the cell centroid to any edge; the furthest away that a vector point can be while still guaranteed within a cell
+   * at the given `level`.
+   */
+  static cellRadius(level: number = 0) {
+    // dist from cell centroid to edge is 1/2 at level 0
+    return Math.pow(2, level) / 2
   }
 }
 

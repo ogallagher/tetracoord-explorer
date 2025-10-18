@@ -5,7 +5,7 @@ import { parsePowerScalar, PowerScalar } from "../scalar"
 import { RadixType } from "../scalar/radix"
 import { VectorType } from "../vector/const"
 import Tetracoordinate from "../vector/tetracoordinate"
-import { COSPI6_CONST, IRR_SUFFIX_DOTS, IRR_SUFFIX_I, IRR_SUFFIX_OP, NEG_OP, POS_OP, RADIX_PREFIX, RADIX_PREFIX_OP, SINPI6_CONST, VEC_ACCESS_OP } from "./symbol"
+import { COSPI6_CONST, IRR_SUFFIX_DOTS, IRR_SUFFIX_I, IRR_SUFFIX_OP, ITEM_DELIM_OP, NEG_OP, POS_OP, RADIX_PREFIX, RADIX_PREFIX_OP, SINPI6_CONST, VEC_ACCESS_OP } from "./symbol"
 
 // parser handle literal number radix prefix as <radix> @ <raw-fractional-value>
 nary(RADIX_PREFIX_OP, PREC_ACCESS)
@@ -15,7 +15,15 @@ unary(IRR_SUFFIX_OP, PREC_ACCESS+1, true)
 token(COSPI6_CONST, PREC_TOKEN, a => a ? err() : [, TRIG_COS_PI_OVER_6])
 token(SINPI6_CONST, PREC_TOKEN, a => a ? err() : [, TRIG_SIN_PI_OVER_6])
 
-export type ExpressionValue = number|PowerScalar|Tetracoordinate|CartesianCoordinate
+type ExpressionValueSingleton = number|PowerScalar|Tetracoordinate|CartesianCoordinate
+/**
+ * Used for values like {@linkcode CartesianCoordinate ccoords} that consume a list of components.
+ */
+class ExpressionValueCollection {
+  constructor(public items: ExpressionValueSingleton[]) {}
+}
+export type ExpressionValue = ExpressionValueSingleton|ExpressionValueCollection
+
 export type ExpressionLeaf = ExpressionValue|string|null|undefined
 export type ExpressionTree = (ExpressionLeaf|ExpressionTree)[]
 
@@ -85,7 +93,7 @@ function parseScalarNode(node: ExpressionTree, radixType: RadixType): PowerScala
   }
 }
 
-function evalAddSub(op: '-'|'+', a: ExpressionValue, b: ExpressionValue): ExpressionValue {
+function evalAddSub(op: '-'|'+', a: ExpressionValueSingleton, b: ExpressionValueSingleton): ExpressionValueSingleton {
   if (typeof a === 'number' && typeof b === 'number') {
     // simple scalar
     return op === NEG_OP ? a - b : a + b
@@ -167,20 +175,39 @@ function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixTy
     else {
       // binary
       const _b = parseExpressionTree(b as ExpressionTree)
-      return evalAddSub(op, _a, _b)
+      return evalAddSub(op, _a as ExpressionValueSingleton, _b as ExpressionValueSingleton)
     }
   }
+  else if (op === ITEM_DELIM_OP) {
+    // return collection of values
+    return new ExpressionValueCollection(node.slice(1).map(i => parseExpressionTree(i as ExpressionTree, radixCtx) as ExpressionValueSingleton))
+  }
   else if (op === VEC_ACCESS_OP && (a === VectorType.CCoord || a === VectorType.TCoord)) {
-    if (a === VectorType.CCoord) {
+    const _b = parseExpressionTree(b as ExpressionTree, a === VectorType.CCoord ? RadixType.D : RadixType.Q)
+
+    if (_b instanceof CartesianCoordinate || _b instanceof Tetracoordinate) {
+      // vector type conversion
+      if ((a === VectorType.CCoord && _b instanceof CartesianCoordinate) || (a === VectorType.TCoord && _b instanceof Tetracoordinate)) {
+        // identity
+        return _b
+      }
+      else if (a === VectorType.CCoord) {
+        // tcoord --> ccoord
+        return (_b as Tetracoordinate).toCartesianCoord()
+      }
+      else {
+        // ccoord --> tcoord
+        return Tetracoordinate.fromCartesianCoord(_b as CartesianCoordinate)
+      }
+    }
+    else if (a === VectorType.CCoord) {
       // convert ['[]' a='cc' b=[',' <x> <y>]] to CartesianCoordinate
-      const _x = parseExpressionTree(b[1], RadixType.D) as number
-      const _y = parseExpressionTree(b[2], RadixType.D) as number
-      return new CartesianCoordinate(_x, _y)
+      const [_x, _y] = (_b as ExpressionValueCollection).items
+      return new CartesianCoordinate(_x as number, _y as number)
     }
     else {
       // convert ['[]' a='tc' b=[ <scalar-node>]] to Tetracoordinate
-      const _b = parseExpressionTree(b as ExpressionTree, RadixType.Q) as number|PowerScalar
-      return new Tetracoordinate(_b)
+      return new Tetracoordinate(_b as number|PowerScalar)
     }
   }
   else if (op !== undefined) {

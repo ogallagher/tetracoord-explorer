@@ -1,9 +1,9 @@
 import { describe, it } from "mocha"
 import assert from "node:assert"
 import { ExpressionValue, evalExpression, preparseExpression } from "../src/tetracoord/calculator/expression"
-import CartesianCoordinate, { TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6 } from "../src/tetracoord/vector/cartesian"
+import Ccoord, { TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_3, TRIG_SIN_PI_OVER_6 } from "../src/tetracoord/vector/cartesian"
 import { PowerScalar } from "../src/tetracoord/scalar"
-import { Tetracoordinate } from "../src/tetracoord"
+import { Tetracoordinate as Tcoord } from "../src/tetracoord"
 import { RadixType } from "../src/tetracoord/scalar/radix"
 
 /**
@@ -14,7 +14,7 @@ function testEvalExpression(expr: string) {
     return evalExpression(expr as string)
   }
   catch (err) {
-    throw new Error(`parse error for input=${expr} preparse=${preparseExpression(expr as string)}`, {cause: err})
+    throw new Error(`parse-eval error for input=${expr} preparse=${preparseExpression(expr as string)}`, {cause: err})
   }
 }
 
@@ -71,41 +71,75 @@ describe('tetracoord.calculator', () => {
       })
   
       it('evals tcoord vector literals', () => {
-        let actual: Tetracoordinate
+        let actual: Tcoord
   
         for (let [input, expected] of [
-          ['tc[0q31]', new Tetracoordinate('31')],
-          ['tc[0q1.1]', new Tetracoordinate('11', undefined, undefined, -1)],
-          ['tc[0b1101]', new Tetracoordinate('31')],
-          ['tc[0q312i]', new Tetracoordinate('312', undefined, undefined, undefined, true)],
-          ['tc[0q312.1i]', new Tetracoordinate('3121', undefined, undefined, -1, true)],
-          ['tc[-0q312.1i]', new Tetracoordinate('-3121', undefined, undefined, -1, true)]
+          ['tc[0q31]', new Tcoord('31')],
+          ['tc[0q1.1]', new Tcoord('11', undefined, undefined, -1)],
+          ['tc[0b1101]', new Tcoord('31')],
+          ['tc[0q312i]', new Tcoord('312', undefined, undefined, undefined, true)],
+          ['tc[0q312.1i]', new Tcoord('3121', undefined, undefined, -1, true)],
+          ['tc[-0q312.1i]', new Tcoord('-3121', undefined, undefined, -1, true)],
+          ['tc[0q0.2 + 0q0.2]', new Tcoord('1')]
         ]) {
-          actual = testEvalExpression(input as string) as Tetracoordinate
+          actual = testEvalExpression(input as string) as Tcoord
           assert.deepStrictEqual(
             actual.value.toString(RadixType.Q), 
-            (expected as Tetracoordinate).value.toString(), 
+            (expected as Tcoord).value.toString(), 
             `mismatch for input=${input} actual=${actual} expected=${expected}`
           )
         }
       })
   
       it('evals ccoord vector literals', () => {
-        let actual: CartesianCoordinate
+        let actual: Ccoord
   
         for (let [input, expected] of [
-          ['cc[5, 6.1]', new CartesianCoordinate(5, 6.1)],
-          ['cc[cospi6, -sinpi6]', new CartesianCoordinate(TRIG_COS_PI_OVER_6, -TRIG_SIN_PI_OVER_6)],
+          ['cc[5, 6.1]', new Ccoord(5, 6.1)],
+          ['cc[cospi6, -sinpi6]', new Ccoord(TRIG_COS_PI_OVER_6, -TRIG_SIN_PI_OVER_6)],
           [
             'cc[-0q11i, 0q12.1]', 
-            new CartesianCoordinate(
+            new Ccoord(
               new PowerScalar({digits: new Uint8Array([0b0101]), sign: -1, irrational: true}), 
               new PowerScalar({digits: new Uint8Array([0b011001]), power: -1})
             )
           ]
         ]) {
-          actual = testEvalExpression(input as string) as CartesianCoordinate
-          assert.deepStrictEqual(actual.toString(), (expected as CartesianCoordinate).toString(), `mismatch for input=${input}`)
+          actual = testEvalExpression(input as string) as Ccoord
+          assert.deepStrictEqual(actual.toString(), (expected as Ccoord).toString(), `mismatch for input=${input}`)
+        }
+      })
+
+      it('evals vector conversion', () => {
+        let actual: ExpressionValue
+        const tcoordCellRadius = Tcoord.cellRadius(0)
+
+        for (let [input, expected] of [
+          // tc to cc
+          ['cc[tc[0q3]]', new Ccoord(TRIG_COS_PI_OVER_6, -TRIG_SIN_PI_OVER_6)],
+          ['cc[-tc[0q101]]', new Ccoord(0, -3)], // -0q101 === 0q011
+
+          // cc to tc
+          ['tc[cc[0, 1]]', new Tcoord('1')],
+          ['tc[cc[-cospi6, -sinpi6]]', new Tcoord('2')],
+          ['tc[-cc[cospi6, sinpi6]]', new Tcoord('2')]
+        ]) {
+          actual = testEvalExpression(input as string)
+          
+          if (actual instanceof Ccoord) {
+            const dist = Ccoord.subtract(actual, expected as Ccoord).magnitude()
+            assert(
+              dist < tcoordCellRadius,
+              `fuzzy ccoord=${actual} mismatch at input=${input} dist=${dist} cellRadius=${tcoordCellRadius}`
+            )
+          }
+          else if (actual instanceof Tcoord) {
+            assert.deepStrictEqual(
+              actual, 
+              expected, 
+              `tcoord mismatch at input=${input} actual=${actual} expected=${expected}`
+            )
+          }
         }
       })
     })
@@ -121,16 +155,16 @@ describe('tetracoord.calculator', () => {
             ['0d7 - 0d0.5', new PowerScalar({digits: 6.5})],
             ['cospi6 - sinpi6', TRIG_COS_PI_OVER_6 - TRIG_SIN_PI_OVER_6],
             ['1 - sinpi6', 0.5],
-            ['0q3210 - 0q0001', new PowerScalar({digits: new Uint8Array([0b11100011])})],
-            ['0q3210 - +0q0001', new PowerScalar({digits: new Uint8Array([0b11100011])})],
-            ['0q3210 - -0q0001', new PowerScalar({digits: new Uint8Array([0b11100101])})],
+            ['0q3210 - 0q0001', new PowerScalar({digits: new Uint8Array([0b11100011]), radix: RadixType.Q})],
+            ['0q3210 - +0q0001', new PowerScalar({digits: new Uint8Array([0b11100011]), radix: RadixType.Q})],
+            ['0q3210 - -0q0001', new PowerScalar({digits: new Uint8Array([0b11100101]), radix: RadixType.Q})],
 
             // add
             ['6.5 + 0.5', 7],
-            ['0q12.2 + 0.5', new PowerScalar({digits: new Uint8Array([0b0111])})], // 0q12.2 + 0q0.2 = 0q13
-            ['0q12.2 + 0b0.1', new PowerScalar({digits: new Uint8Array([0b0111])})],
+            ['0q12.2 + 0.5', new PowerScalar({digits: new Uint8Array([0b0111]), radix: RadixType.Q})], // 0q12.2 + 0q0.2 = 0q13
+            ['0q12.2 + 0b0.1', new PowerScalar({digits: new Uint8Array([0b0111]), radix: RadixType.Q})],
             ['-sinpi6 + -sinpi6', -1],
-            ['0q32103111 + 0q00200222', new PowerScalar({digits: new Uint8Array([0b11101100, 255])})],
+            ['0q32103111 + 0q00200222', new PowerScalar({digits: new Uint8Array([0b11101100, 255]), radix: RadixType.Q})]
           ]) {
             actual = testEvalExpression(input as string)
             assert.deepStrictEqual(actual, expected, `mismatch for input=${input} actual=${actual} expected=${expected}`)
@@ -139,7 +173,33 @@ describe('tetracoord.calculator', () => {
       })
 
       describe('vector', () => {
+        it('evals vector add,subtract', () => {
+          let actual: ExpressionValue
 
+          for (let [input, expected] of [
+            // subtract
+            ['cc[7,5] - cc[2,-2]', new Ccoord(5, 7)],
+            ['cc[0d7, 0q11] - cc[0b10, -0b10]', new Ccoord(5, 7)],
+            ['tc[0q1] - tc[0q0.2 + 0q0.2]', new Tcoord('0')],
+
+            // add
+            ['cc[4.5, +5] + cc[0.5, -5]', new Ccoord(5, 0)],
+            ['tc[0q1] + -tc[0q3]', new Tcoord('32')],
+            ['tc[0q1] + tc[0q3] + tc[0q3]', new Tcoord('21')],
+            ['tc[0q1] + tc[-cc[cospi6, -sinpi6]]', new Tcoord('32')] // mixed types
+          ]) {
+            actual = testEvalExpression(input as string)
+            assert.deepStrictEqual(
+              expected instanceof Ccoord ? (actual as Ccoord).toString(RadixType.D) : (actual as Tcoord).toString(), 
+              expected instanceof Ccoord ? (expected as Ccoord).toString(RadixType.D) : (actual as Tcoord).toString(), 
+              `mismatch for input=${input} actual=${actual} expected=${expected}`
+            )
+          }
+        })
+
+        it.skip('evals semiscalar multiply,divide', () => {
+
+        })
       })
     })
   })
