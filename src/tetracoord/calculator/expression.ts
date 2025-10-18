@@ -248,7 +248,7 @@ function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixTy
     return parseScalarNode(node, radixCtx)
   }
   else if (op === NEG_OP || op === POS_OP) {
-    const _a = parseExpressionTree(a as ExpressionTree)
+    const _a = parseExpressionTree(a as ExpressionTree, radixCtx)
 
     if (b === undefined) {
       // unary
@@ -263,24 +263,24 @@ function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixTy
     }
     else {
       // binary
-      const _b = parseExpressionTree(b as ExpressionTree)
+      const _b = parseExpressionTree(b as ExpressionTree, radixCtx)
       return evalAddSub(op, _a as ExpressionValueSingleton, _b as ExpressionValueSingleton)
     }
   }
   else if (op === ABS_GROUP_OP && b === undefined) {
-    return evalAbs(parseExpressionTree(a as ExpressionTree) as ExpressionValueSingleton)
+    return evalAbs(parseExpressionTree(a as ExpressionTree, radixCtx) as ExpressionValueSingleton)
   }
   else if (op === MUL_OP || op === DIV_OP) {
     return evalMulDiv(
       op,
-      parseExpressionTree(a as ExpressionTree) as ExpressionValueSingleton,
-      parseExpressionTree(b as ExpressionTree) as ExpressionValueSingleton
+      parseExpressionTree(a as ExpressionTree, radixCtx) as ExpressionValueSingleton,
+      parseExpressionTree(b as ExpressionTree, radixCtx) as ExpressionValueSingleton
     )
   }
   else if (op === EXP_OP) {
     return evalPow(
-      parseExpressionTree(a as ExpressionTree) as ExpressionValueSingleton,
-      parseExpressionTree(b as ExpressionTree) as ExpressionValueSingleton
+      parseExpressionTree(a as ExpressionTree, radixCtx) as ExpressionValueSingleton,
+      parseExpressionTree(b as ExpressionTree, radixCtx) as ExpressionValueSingleton
     )
   }
   else if (op === ITEM_DELIM_OP) {
@@ -316,13 +316,13 @@ function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixTy
     }
   }
   else if (op === GROUP_OP && b === undefined) {
-    return parseExpressionTree(a as ExpressionTree)
+    return parseExpressionTree(a as ExpressionTree, radixCtx)
   }
   else if (op !== undefined) {
     // operator expression
     const isLeaf = (n: ExpressionLeaf|ExpressionTree) => !Array.isArray(n) || n[0] === undefined
 
-    const _a = isLeaf(a) ? a : parseExpressionTree(a as ExpressionTree)
+    const _a = isLeaf(a) ? a : parseExpressionTree(a as ExpressionTree, radixCtx)
 
     if (b === undefined) {
       // unary operation
@@ -330,14 +330,22 @@ function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixTy
     }
     else {
       // binary operation
-      const _b = isLeaf(b) ? b : parseExpressionTree(b as ExpressionTree)
+      const _b = isLeaf(b) ? b : parseExpressionTree(b as ExpressionTree, radixCtx)
 
       throw new Error(`unsupported binary operation ${[op, _a, _b]}`)
     }
   }
-  else {
+  else if (typeof a === 'number') {
     // literal
-    return a as ExpressionValue
+    if (radixCtx === RadixType.D) {
+      return a as ExpressionValue
+    }
+    else {
+      return parsePowerScalar(a, radixCtx)
+    }
+  }
+  else {
+    throw new Error(`invalid literal type ${typeof a} of a=${a}`)
   }
 }
 

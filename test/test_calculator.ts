@@ -347,7 +347,8 @@ describe('tetracoord', () => {
           ['cc[3, (2*2)]', new Ccoord(3, 4)],
   
           // tcoord
-          ['tc[(0d2 * 0d2)]', new Tcoord(parsePowerScalar(4, RadixType.D))]
+          ['tc[(0d2 * 0d2)]', new Tcoord(parsePowerScalar(4, RadixType.D))],
+          ['tc[(2 * 2)]', new Tcoord(parsePowerScalar('10', RadixType.Q))] // implied radix=q for tcoord
         ]) {
           actual = testEvalExpression(input as string)
           if (typeof expected === 'number') {
