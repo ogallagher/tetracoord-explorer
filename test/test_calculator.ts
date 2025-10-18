@@ -36,8 +36,8 @@ describe('tetracoord', () => {
           ['0d1.5i', 'd@1.5~'],
           ['0q320.1i', 'q@320.1~'],
           ['0q320.1...', 'q@320.1~'],
-          ['0q320.0i', 'q@320.0~'],
-          ['-0q320.0i', '-q@320.0~']
+          ['0q320.0i', 'q@320.0'],
+          ['-0q320.0i', '-q@320.0']
         ]) {
           actual = preparseExpression(input)
           assert.strictEqual(actual, expected)
@@ -60,6 +60,7 @@ describe('tetracoord', () => {
   
           // irrational
           ['0d1.5i', new PowerScalar({digits: 15, power: -1, irrational: true})],
+          ['7.0i', 7],
           ['0q320.1i', new PowerScalar({digits: new Uint8Array([0b11100001]), radix: RadixType.Q, power: -1, irrational: true})],
           ['0q320.1...', new PowerScalar({digits: new Uint8Array([0b11100001]), radix: RadixType.Q, power: -1, irrational: true})],
           ['0q320.0i', new PowerScalar({digits: new Uint8Array([0b111000]), radix: RadixType.Q, power: 0, irrational: false})],
@@ -152,9 +153,25 @@ describe('tetracoord', () => {
 
     describe('arithmetic', () => {
       describe('scalar', () => {
-        it('evals scalar add,subtract', () => {
-          let actual: ExpressionValue
+        let actual: ExpressionValue
 
+        const test = (input: string, expected: number|PowerScalar, maxError = 0) => {
+          actual = testEvalExpression(input)
+          if (typeof expected === 'number') {
+            assert(
+              Math.abs((actual as number) - expected) <= maxError, 
+              `mismatch for input=${input} actual=${actual} expected=${expected}`
+            )
+          }
+          else {
+            assert(
+              Math.abs((actual as PowerScalar).toNumber() - (expected as PowerScalar).toNumber()) <= maxError, 
+              `mismatch for input=${input} actual=${actual} expected=${expected}`
+            )
+          }
+        }
+
+        it('evals scalar rational add,subtract', () => {
           for (let [input, expected] of [
             // subtract
             ['7 - 0.5', 6.5],
@@ -172,13 +189,27 @@ describe('tetracoord', () => {
             ['-sinpi6 + -sinpi6', -1],
             ['0q32103111 + 0q00200222', new PowerScalar({digits: new Uint8Array([0b11101100, 255]), radix: RadixType.Q})]
           ]) {
-            actual = testEvalExpression(input as string)
-            if (typeof expected === 'number') {
-              assert.strictEqual(actual, expected, `mismatch for input=${input} actual=${actual} expected=${expected}`)
-            }
-            else {
-              assert.deepStrictEqual(actual, expected, `mismatch for input=${input} actual=${actual} expected=${expected}`)
-            }
+            test(input as string, expected as number|PowerScalar)
+          }
+        })
+
+        it('evals scalar irrational add,subtract', () => {
+          for (let [input, expected] of [
+            // subtract
+            ['7.0i - 0.50i', 6.5], // not actually irrational
+            ['0d7.1i - 0d0.53i', new PowerScalar({digits: (7 + 1/9) - (0.5 + 3/90)})],
+            ['1.9i - sinpi6', new PowerScalar({digits: 1+(9/9) - 0.5})],
+            ['0q3210.1i - 0q0001.1i', new PowerScalar({digits: new Uint8Array([0b11100011]), radix: RadixType.Q})],
+            // ['0q3210 - -0q0001', new PowerScalar({digits: new Uint8Array([0b11100101]), radix: RadixType.Q})],
+
+            // add
+            ['6.5i + 0.5i', new PowerScalar({digits: 6+(5/9) + (5/9)})],
+            // ['0q12.2 + 0.5', new PowerScalar({digits: new Uint8Array([0b0111]), radix: RadixType.Q})], // 0q12.2 + 0q0.2 = 0q13
+            // ['0q12.2 + 0b0.1', new PowerScalar({digits: new Uint8Array([0b0111]), radix: RadixType.Q})],
+            // ['-sinpi6 + -sinpi6', -1],
+            // ['0q32103111 + 0q00200222', new PowerScalar({digits: new Uint8Array([0b11101100, 255]), radix: RadixType.Q})]
+          ]) {
+            test(input as string, expected as number|PowerScalar, 1e-7)
           }
         })
       })

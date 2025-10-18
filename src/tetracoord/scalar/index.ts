@@ -254,8 +254,6 @@ export class PowerScalar {
    * 
    * Currently implemented by converting to raw numbers before operating.
    * 
-   * // TODO handle irrational
-   * 
    * @param a 
    * @param b 
    */
@@ -419,18 +417,11 @@ export function digitsToBytes(digits: number[], radix: RadixType.B|RadixType.Q, 
 }
 
 /**
- * @param rawNum Raw (formatted) fractional scalar number without radix.
+ * @param rawStr Raw (formatted) fractional scalar number without radix.
  * @param levelOrder 
  * @returns Whole scalar formatted digits without radix, power, and sign.
  */
-export function parseRawDigits(rawNum: number|string, levelOrder: ByteLevelOrder = ByteLevelOrder.DEFAULT) {
-  let rawStr = (
-    typeof rawNum === 'number' 
-    // format using arbitrary radix >= maximum supported
-    ? rawNum.toString(10) 
-    : rawNum
-  )
-
+export function parseRawDigits(rawStr: string, levelOrder: ByteLevelOrder = ByteLevelOrder.DEFAULT) {
   // extract sign
   let sign: Sign = rawStr.startsWith(NEG_OP) ? -1 : 1
   if (sign === -1) {
@@ -473,8 +464,20 @@ export function parsePowerScalar(
   irrational: boolean = false,
   levelOrder: ByteLevelOrder = ByteLevelOrder.DEFAULT
 ): PowerScalar|imaginary {
-  const { rawDigits, power, sign } = parseRawDigits(rawNum, levelOrder)
-  const leastDigitNonzero = rawDigits[levelOrder === ByteLevelOrder.HIGH_FIRST ? rawDigits.length-1 : 0] !== 0
+  let rawStr = (
+    typeof rawNum === 'number' 
+    // format using arbitrary radix >= maximum supported
+    ? rawNum.toString(10) 
+    : rawNum
+  )
+  const { rawDigits, power, sign } = parseRawDigits(rawStr, levelOrder)
+  const leastDigitNonzero = (
+    (
+      levelOrder === ByteLevelOrder.HIGH_FIRST 
+      ? rawStr.length-1-rawStr.lastIndexOf('0') 
+      : rawStr.indexOf('0')
+    ) !== 0
+  )
 
   if (radix === RadixType.D) {
     if (levelOrder === ByteLevelOrder.LOW_FIRST) {

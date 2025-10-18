@@ -50,7 +50,13 @@ export function preparseExpression(str: string): string {
     matchStr = match[0]
     if (matchStr.endsWith(IRR_SUFFIX_I) || matchStr.endsWith(IRR_SUFFIX_DOTS)) {
       const digit = match[2]
-      strParts.push(`${digit}${IRR_SUFFIX_OP}`)
+      if (digit === '0') {
+        // not actually irrational; remove suffix in preparser
+        strParts.push(digit)
+      }
+      else {
+        strParts.push(`${digit}${IRR_SUFFIX_OP}`)
+      }
     }
     else if (matchStr.startsWith(RADIX_PREFIX)) {
       const radix = match[2]
