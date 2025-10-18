@@ -4,7 +4,8 @@
   "description": "Tetracoordinates engine, grapher, calculator, playground.",
   "main": "index.js",
   "scripts": {
-    "test": "NODE_OPTIONS=\"--import=tsx\" mocha test/**/*.ts",
+    "_test": "NODE_OPTIONS=\"--import=tsx\" mocha",
+    "test": "npm run _test -- test/**/*.ts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

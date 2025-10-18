@@ -289,7 +289,8 @@ describe('tetracoord.calculator', () => {
         })
 
         it('evals semiscalar abs,magnitude', () => {
-          let actual: ExpressionValue
+          let actual: ExpressionValue, _actual: number, _expected: number
+          const maxError = 1e-7
 
           for (let [input, expected] of [
             // scalar
@@ -297,25 +298,28 @@ describe('tetracoord.calculator', () => {
             ['|0-2|', 2],
             ['|-0b01|', parsePowerScalar('01', RadixType.B)],
             ['|0q10 * -0b01|', parsePowerScalar('10', RadixType.Q)],
-            ['|0q10 * -0b01 + 1 - |-1||', parsePowerScalar('2', RadixType.Q)],
-            ['||-|-1| + 0q10 * -0b01 + 1||', 2],
+            ['|0q10 * -0b01 + 1 - |-1||', parsePowerScalar('10', RadixType.Q)], // |4 * -1 + 1 - 1| == |-4|
+            ['||-|-1| + 0q10 * -0b01 + 1||', parsePowerScalar(4, RadixType.D)],
             ['1|2', new Error(`${ABS_GROUP_OP[0]} for scalar absolute value is a group operator`)],
             
             // ccoord
             ['|-cc[0,1]|', 1],
 
             // tcoord
-            ['|-tc[1]|', 1]
+            ['|-tc[1]|', 1],
+            ['|tc[|-2|]|', 1]
           ]) {
             if (expected instanceof Error) {
               assert.throws(() => testEvalExpression(input as string))
             }
             else {
               actual = testEvalExpression(input as string)
-              assert.strictEqual(
-                actual.toString(), 
-                expected.toString(), 
-                `mismatch for input=${input} actual=${actual} expected=${expected}`
+              _actual = typeof actual === 'number' ? actual : (actual as PowerScalar).toNumber()
+              _expected = typeof expected === 'number' ? expected : (expected as PowerScalar).toNumber()
+
+              assert(
+                Math.abs(_actual - _expected) < maxError,
+                `mismatch error=${_actual - _expected} for input=${input} actual=${actual} expected=${expected}`
               )
             }
           }
