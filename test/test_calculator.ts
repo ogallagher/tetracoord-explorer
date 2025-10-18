@@ -2,7 +2,7 @@ import { describe, it } from "mocha"
 import assert from "node:assert"
 import { ExpressionValue, evalExpression, preparseExpression } from "../src/tetracoord/calculator/expression"
 import Ccoord, { TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_3, TRIG_SIN_PI_OVER_6 } from "../src/tetracoord/vector/cartesian"
-import { PowerScalar } from "../src/tetracoord/scalar"
+import { parsePowerScalar, PowerScalar } from "../src/tetracoord/scalar"
 import { Tetracoordinate as Tcoord } from "../src/tetracoord"
 import { RadixType } from "../src/tetracoord/scalar/radix"
 
@@ -196,9 +196,37 @@ describe('tetracoord.calculator', () => {
             )
           }
         })
+      })
 
-        it.skip('evals semiscalar multiply,divide', () => {
+      describe('semiscalar', () => {
+        it('evals semiscalar multiply,divide', () => {
+          let actual: ExpressionValue
 
+          for (let [input, expected] of [
+            // multiply
+            ['5 * 11 * 0.1', 5.5],
+            ['5 * 0q23 * 0.1', 5.5],
+            ['cc[6,4] * 1.5', new Ccoord(9, 6)],
+            ['0d1.0 * cc[6*1.5, 4*1.5]', new Ccoord(9, 6)],
+            ['tc[0q2] * 0d3', new Tcoord('202')],
+            ['0d3 * tc[0q2]', new Tcoord('202')],
+            ['-3.0 * tc[0q2]', new Tcoord('22')],
+
+            // divide
+            ['55 / 11 / 10', 5.5],
+            ['0b110111 / 0q23 / 0.1', parsePowerScalar('101', RadixType.B)],
+            ['cc[9,6] / 1.5', new Ccoord(6, 4)],
+            ['cc[9/1.5, 6/1.5] / 2', new Ccoord(3, 2)],
+            ['tc[0q202] / 0d3', new Tcoord('2')],
+            ['tc[0q22] / -3.0', new Tcoord('2')],
+          ]) {
+            actual = testEvalExpression(input as string)
+            assert.deepStrictEqual(
+              expected instanceof Ccoord ? (actual as Ccoord).toString(RadixType.D) : (actual as Tcoord).toString(), 
+              expected instanceof Ccoord ? (expected as Ccoord).toString(RadixType.D) : (actual as Tcoord).toString(), 
+              `mismatch for input=${input} actual=${actual} expected=${expected}`
+            )
+          }
         })
       })
     })

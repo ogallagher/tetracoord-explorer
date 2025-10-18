@@ -5,7 +5,7 @@ import { parsePowerScalar, PowerScalar } from "../scalar"
 import { RadixType } from "../scalar/radix"
 import { VectorType } from "../vector/const"
 import Tetracoordinate from "../vector/tetracoordinate"
-import { COSPI6_CONST, IRR_SUFFIX_DOTS, IRR_SUFFIX_I, IRR_SUFFIX_OP, ITEM_DELIM_OP, NEG_OP, POS_OP, RADIX_PREFIX, RADIX_PREFIX_OP, SINPI6_CONST, VEC_ACCESS_OP } from "./symbol"
+import { COSPI6_CONST, DIV_OP, IRR_SUFFIX_DOTS, IRR_SUFFIX_I, IRR_SUFFIX_OP, ITEM_DELIM_OP, MUL_OP, NEG_OP, POS_OP, RADIX_PREFIX, RADIX_PREFIX_OP, SINPI6_CONST, VEC_ACCESS_OP } from "./symbol"
 
 // parser handle literal number radix prefix as <radix> @ <raw-fractional-value>
 nary(RADIX_PREFIX_OP, PREC_ACCESS)
@@ -125,7 +125,59 @@ function evalAddSub(op: '-'|'+', a: ExpressionValueSingleton, b: ExpressionValue
     }
     else {
       // mixed vector
-      throw new Error(`vector binary subtract not supported for mixed types; convert first. a=${a} b=${b}`)
+      throw new Error(`vector binary add/subtract not supported for mixed types; convert first. a=${a} b=${b}`)
+    }
+  }
+}
+
+function evalMulDiv(op: '*'|'/', a: ExpressionValueSingleton, b: ExpressionValueSingleton): ExpressionValueSingleton {
+  if (typeof a === 'number' && typeof b === 'number') {
+    // simple scalar
+    return op === MUL_OP ? a * b : a / b
+  }
+  else {
+    let semiscalar: boolean
+    if (a instanceof Tetracoordinate || a instanceof CartesianCoordinate) {
+      semiscalar = true
+    }
+    if (!semiscalar && b instanceof Tetracoordinate || b instanceof CartesianCoordinate) {
+      semiscalar = true
+      if (op === '/') {
+        // divide is not commutative
+        throw new Error (`operands of binary divide must be vector left=${a}, scalar right=${b}`)
+      }
+      // swap operands for vector as left
+      const _a = a; a = b; b = _a
+    }
+
+    if (semiscalar) {
+      const _b = b as number|PowerScalar
+      if (a instanceof Tetracoordinate) {
+        return (
+          op === MUL_OP
+          ? a.clone().multiplyFromCartesian(_b)
+          : a.clone().divideFromCartesian(_b)
+        )
+      }
+      else {
+        return (
+          op === MUL_OP
+          ? CartesianCoordinate.multiply(a as CartesianCoordinate, _b)
+          : CartesianCoordinate.divide(a as CartesianCoordinate, _b)
+        )
+      }
+    }
+    else if (a instanceof PowerScalar || b instanceof PowerScalar) {
+      // power scalar
+      return (
+        op === MUL_OP
+        ? PowerScalar.subtract(a as number|PowerScalar, b as number|PowerScalar)
+        : PowerScalar.add(a as number|PowerScalar, b as number|PowerScalar)
+      )
+    }
+    else {
+      // unknown, probably vector
+      throw new Error(`binary multiply/divide not supported for given types a=${a} b=${b}`)
     }
   }
 }
@@ -177,6 +229,13 @@ function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixTy
       const _b = parseExpressionTree(b as ExpressionTree)
       return evalAddSub(op, _a as ExpressionValueSingleton, _b as ExpressionValueSingleton)
     }
+  }
+  else if (op === MUL_OP || op === DIV_OP) {
+    return evalMulDiv(
+      op,
+      parseExpressionTree(a as ExpressionTree) as ExpressionValueSingleton,
+      parseExpressionTree(b as ExpressionTree) as ExpressionValueSingleton
+    )
   }
   else if (op === ITEM_DELIM_OP) {
     // return collection of values

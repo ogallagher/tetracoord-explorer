@@ -98,8 +98,12 @@ export class CartesianCoordinate {
     return this.fromRaw(a.v.$subtract(b.v))
   }
 
-  static multiplyScalar(a: CartesianCoordinate, s: number) {
-    return this.fromRaw(a.v.$multiply(s))
+  static multiply(a: CartesianCoordinate, s: number|PowerScalar) {
+    return this.fromRaw(a.v.$multiply(typeof s === 'number' ? s : s.toNumber()))
+  }
+
+  static divide(a: CartesianCoordinate, s: number|PowerScalar) {
+    return this.fromRaw(a.v.$divide(typeof s === 'number' ? s : s.toNumber()))
   }
 
   /**

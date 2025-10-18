@@ -338,10 +338,10 @@ export class Tetracoordinate {
    * @returns `this`
    */
   addFromCartesian(other: Tetracoordinate): Tetracoordinate {
-    let cthis = this.toCartesianCoord()
-    let cother = other.toCartesianCoord()
+    const cthis = this.toCartesianCoord()
+    const cother = other.toCartesianCoord()
 
-    let sum = Tetracoordinate.fromCartesianCoord(
+    const sum = Tetracoordinate.fromCartesianCoord(
       CartesianCoordinate.add(cthis, cother),
       Math.min(this.value.power, other.value.power)
     )
@@ -356,16 +356,34 @@ export class Tetracoordinate {
    * @returns `this`
    */
   subtractFromCartesian(other: Tetracoordinate): Tetracoordinate {
-    let cthis = this.toCartesianCoord()
-    let cother = other.toCartesianCoord()
+    const cthis = this.toCartesianCoord()
+    const cother = other.toCartesianCoord()
 
-    let diff = Tetracoordinate.fromCartesianCoord(
+    const diff = Tetracoordinate.fromCartesianCoord(
       CartesianCoordinate.subtract(cthis, cother),
       Math.min(this.value.power, other.value.power)
     )
     this.set(diff)
 
     return diff
+  }
+
+  multiplyFromCartesian(value: number|PowerScalar): Tetracoordinate {
+    const prod = Tetracoordinate.fromCartesianCoord(
+      CartesianCoordinate.multiply(this.toCartesianCoord(), value)
+    )
+    this.set(prod)
+
+    return prod
+  }
+
+  divideFromCartesian(value: number|PowerScalar): Tetracoordinate {
+    const prod = Tetracoordinate.fromCartesianCoord(
+      CartesianCoordinate.divide(this.toCartesianCoord(), value)
+    )
+    this.set(prod)
+
+    return prod
   }
 
   /**

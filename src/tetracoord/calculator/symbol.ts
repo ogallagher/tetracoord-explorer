@@ -45,7 +45,7 @@ export const POS_OP = '+'
 /**
  * Multiply operator.
  */
-export const MULT_OP = '*'
+export const MUL_OP = '*'
 /**
  * Divide operator.
  */
