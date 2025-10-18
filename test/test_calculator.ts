@@ -127,7 +127,7 @@ describe('tetracoord.calculator', () => {
           actual = testEvalExpression(input as string)
           
           if (actual instanceof Ccoord) {
-            const dist = Ccoord.subtract(actual, expected as Ccoord).magnitude()
+            const dist = Ccoord.subtract(actual, expected as Ccoord).magnitude
             assert(
               dist < tcoordCellRadius,
               `fuzzy ccoord=${actual} mismatch at input=${input} dist=${dist} cellRadius=${tcoordCellRadius}`
@@ -222,10 +222,42 @@ describe('tetracoord.calculator', () => {
           ]) {
             actual = testEvalExpression(input as string)
             assert.deepStrictEqual(
-              expected instanceof Ccoord ? (actual as Ccoord).toString(RadixType.D) : (actual as Tcoord).toString(), 
-              expected instanceof Ccoord ? (expected as Ccoord).toString(RadixType.D) : (actual as Tcoord).toString(), 
+              expected instanceof Ccoord ? (actual as Ccoord).toString(RadixType.D) : (actual as Tcoord|object).toString(), 
+              expected instanceof Ccoord ? (expected as Ccoord).toString(RadixType.D) : (actual as Tcoord|object).toString(), 
               `mismatch for input=${input} actual=${actual} expected=${expected}`
             )
+          }
+        })
+
+        it('evals semiscalar exponent', () => {
+          let actual: ExpressionValue
+
+          for (let [input, expected] of [
+            // scalar
+            ['2 ** 4', 16],
+            ['2 ** 4 ** 0.25', 2],
+            ['2 ** 0q10 ** 0b01', 2],
+            
+            // ccoord
+            ['cc[-1,2] ** 3', new Ccoord(-1 * 5, 2 * 5)],
+            ['3 ** cc[-1,2]', new Error('not commutative and left must be vector')],
+
+            // tcoord
+            ['tc[0q2] ** 0d3', new Tcoord('2')],
+            ['tc[0q303] ** 0d2', new Tcoord('330')],
+            ['0d3 ** tc[0q2]', new Error('not commutative and left must be vector')]
+          ]) {
+            if (expected instanceof Error) {
+              assert.throws(() => testEvalExpression(input as string))
+            }
+            else {
+              actual = testEvalExpression(input as string)
+              assert.deepStrictEqual(
+                expected instanceof Ccoord ? (actual as Ccoord).toString(RadixType.D) : (actual as Tcoord|object).toString(), 
+                expected instanceof Ccoord ? (expected as Ccoord).toString(RadixType.D) : (actual as Tcoord|object).toString(), 
+                `mismatch for input=${input} actual=${actual} expected=${expected}`
+              )
+            }
           }
         })
       })

@@ -269,6 +269,8 @@ export class Tetracoordinate {
   /**
    * // TODO handle irrationals
    * 
+   * // TODO implement within {@linkcode PowerScalar}
+   * 
    * @param other {Tetracoordinate} Other tcoord for comparison.
    * 
    * @returns {boolean} true if the two tcoords are equal.
@@ -380,6 +382,15 @@ export class Tetracoordinate {
   divideFromCartesian(value: number|PowerScalar): Tetracoordinate {
     const prod = Tetracoordinate.fromCartesianCoord(
       CartesianCoordinate.divide(this.toCartesianCoord(), value)
+    )
+    this.set(prod)
+
+    return prod
+  }
+
+  powFromCartesian(value: number|PowerScalar): Tetracoordinate {
+    const prod = Tetracoordinate.fromCartesianCoord(
+      CartesianCoordinate.pow(this.toCartesianCoord(), value)
     )
     this.set(prod)
 

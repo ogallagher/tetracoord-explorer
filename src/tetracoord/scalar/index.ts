@@ -207,20 +207,20 @@ export class PowerScalar {
   }
 
   /**
-   * Add scalars. 
+   * Perform an arithmetic operation. 
    * 
    * Output {@linkcode RadixType format} is determined by left operand. 
    * 
-   * Currently implemented by converting to raw numbers before adding.
+   * Currently implemented by converting to raw numbers before operating.
    * 
    * // TODO handle irrational
    * 
    * @param a 
    * @param b 
    */
-  static add(a: number|PowerScalar, b: number|PowerScalar): PowerScalar {
+  protected static eval(op: (a: number, b: number) => number, a: number|PowerScalar, b: number|PowerScalar): PowerScalar {
     const n = this.toNumbers(a, b)
-    const c = n.a + n.b
+    const c = op(n.a, n.b)
     
     if (n.at === RawScalarType.Number) {
       return new PowerScalar({ digits: c })
@@ -231,20 +231,24 @@ export class PowerScalar {
   }
 
   /**
-   * Subtract scalars. See {@linkcode add}.
-   * 
-   * // TODO handle irrational
+   * Add scalars. See {@linkcode PowerScalar.eval} for common implementation details.
+   */
+  static add(a: number|PowerScalar, b: number|PowerScalar): PowerScalar {
+    return this.eval((a,b) => a + b, a, b)
+  }
+
+  /**
+   * Subtract scalars. See {@linkcode PowerScalar.eval} for common implementation details.
    */
   static subtract(a: number|PowerScalar, b: number|PowerScalar): PowerScalar {
-    const n = this.toNumbers(a, b)
-    const c = n.a - n.b
-    
-    if (n.at === RawScalarType.Number) {
-      return new PowerScalar({ digits: c })
-    }
-    else {
-      return parsePowerScalar(c.toString(radixTypeToValue(n.ar)), n.ar, undefined)
-    }
+    return this.eval((a,b) => a-b, a, b)
+  }
+
+  /**
+   * Raise a scalar to an exponent. See {@linkcode PowerScalar.eval} for common implementation details.
+   */
+  static pow(a: number|PowerScalar, b: number|PowerScalar): PowerScalar {
+    return this.eval((a,b) => a**b, a, b)
   }
 }
 

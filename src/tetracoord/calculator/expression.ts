@@ -5,8 +5,10 @@ import { parsePowerScalar, PowerScalar } from "../scalar"
 import { RadixType } from "../scalar/radix"
 import { VectorType } from "../vector/const"
 import Tetracoordinate from "../vector/tetracoordinate"
-import { COSPI6_CONST, DIV_OP, IRR_SUFFIX_DOTS, IRR_SUFFIX_I, IRR_SUFFIX_OP, ITEM_DELIM_OP, MUL_OP, NEG_OP, POS_OP, RADIX_PREFIX, RADIX_PREFIX_OP, SINPI6_CONST, VEC_ACCESS_OP } from "./symbol"
+import { COSPI6_CONST, DIV_OP, EXP_OP, IRR_SUFFIX_DOTS, IRR_SUFFIX_I, IRR_SUFFIX_OP, ITEM_DELIM_OP, MUL_OP, NEG_OP, POS_OP, RADIX_PREFIX, RADIX_PREFIX_OP, SINPI6_CONST, VEC_ACCESS_OP } from "./symbol"
 
+// parser handle exponent
+import "subscript/feature/pow.js"
 // parser handle literal number radix prefix as <radix> @ <raw-fractional-value>
 nary(RADIX_PREFIX_OP, PREC_ACCESS)
 // parser handle literal number irrational suffix as <raw-fractional-value> ~
@@ -76,6 +78,24 @@ export function preparseExpression(str: string): string {
   return strParts.join('')
 }
 
+function parseSemiscalarOperands(a: ExpressionValueSingleton, b: ExpressionValueSingleton, commutative: boolean = true) {
+  let semiscalar: boolean
+  if (a instanceof Tetracoordinate || a instanceof CartesianCoordinate) {
+    semiscalar = true
+  }
+  if (!semiscalar && b instanceof Tetracoordinate || b instanceof CartesianCoordinate) {
+    semiscalar = true
+    if (!commutative) {
+      // operator is not commutative
+      throw new Error (`operands must be vector left=${a}, scalar right=${b}`)
+    }
+    // swap operands for vector as left
+    const _a = a; a = b; b = _a
+  }
+
+  return { semiscalar, a, b }
+}
+
 function parseScalarNode(node: ExpressionTree, radixType: RadixType): PowerScalar {
   const op = node[0]
   const a = node[1]
@@ -136,48 +156,57 @@ function evalMulDiv(op: '*'|'/', a: ExpressionValueSingleton, b: ExpressionValue
     return op === MUL_OP ? a * b : a / b
   }
   else {
-    let semiscalar: boolean
-    if (a instanceof Tetracoordinate || a instanceof CartesianCoordinate) {
-      semiscalar = true
-    }
-    if (!semiscalar && b instanceof Tetracoordinate || b instanceof CartesianCoordinate) {
-      semiscalar = true
-      if (op === '/') {
-        // divide is not commutative
-        throw new Error (`operands of binary divide must be vector left=${a}, scalar right=${b}`)
-      }
-      // swap operands for vector as left
-      const _a = a; a = b; b = _a
-    }
+    let {semiscalar, a: _a, b: _b} = parseSemiscalarOperands(a, b, op === '*')
 
     if (semiscalar) {
-      const _b = b as number|PowerScalar
-      if (a instanceof Tetracoordinate) {
+      if (_a instanceof Tetracoordinate) {
         return (
           op === MUL_OP
-          ? a.clone().multiplyFromCartesian(_b)
-          : a.clone().divideFromCartesian(_b)
+          ? _a.clone().multiplyFromCartesian(_b as number|PowerScalar)
+          : _a.clone().divideFromCartesian(_b as number|PowerScalar)
         )
       }
       else {
         return (
           op === MUL_OP
-          ? CartesianCoordinate.multiply(a as CartesianCoordinate, _b)
-          : CartesianCoordinate.divide(a as CartesianCoordinate, _b)
+          ? CartesianCoordinate.multiply(_a as CartesianCoordinate, _b as number|PowerScalar)
+          : CartesianCoordinate.divide(_a as CartesianCoordinate, _b as number|PowerScalar)
         )
       }
     }
-    else if (a instanceof PowerScalar || b instanceof PowerScalar) {
+    else if (_a instanceof PowerScalar || _b instanceof PowerScalar) {
       // power scalar
       return (
         op === MUL_OP
-        ? PowerScalar.subtract(a as number|PowerScalar, b as number|PowerScalar)
-        : PowerScalar.add(a as number|PowerScalar, b as number|PowerScalar)
+        ? PowerScalar.subtract(_a as number|PowerScalar, _b as number|PowerScalar)
+        : PowerScalar.add(_a as number|PowerScalar, _b as number|PowerScalar)
       )
     }
     else {
       // unknown, probably vector
       throw new Error(`binary multiply/divide not supported for given types a=${a} b=${b}`)
+    }
+  }
+}
+
+function evalPow(a: ExpressionValueSingleton, b: ExpressionValueSingleton): ExpressionValueSingleton {
+  if (typeof a === 'number' && typeof b === 'number') {
+    // simple scalar
+    return a ** b
+  }
+  else {
+    let {semiscalar, a: _a, b: _b} = parseSemiscalarOperands(a, b, false)
+
+    if (semiscalar) {
+      if (_a instanceof Tetracoordinate) {
+        return _a.clone().powFromCartesian(_b as number|PowerScalar)
+      }
+      else {
+        return CartesianCoordinate.pow(_a as CartesianCoordinate, _b as number|PowerScalar)
+      }
+    }
+    else if (_a instanceof PowerScalar || _b instanceof PowerScalar) {
+      return PowerScalar.pow(_a as number|PowerScalar, _b as number|PowerScalar)
     }
   }
 }
@@ -233,6 +262,12 @@ function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixTy
   else if (op === MUL_OP || op === DIV_OP) {
     return evalMulDiv(
       op,
+      parseExpressionTree(a as ExpressionTree) as ExpressionValueSingleton,
+      parseExpressionTree(b as ExpressionTree) as ExpressionValueSingleton
+    )
+  }
+  else if (op === EXP_OP) {
+    return evalPow(
       parseExpressionTree(a as ExpressionTree) as ExpressionValueSingleton,
       parseExpressionTree(b as ExpressionTree) as ExpressionValueSingleton
     )

@@ -58,7 +58,7 @@ export class CartesianCoordinate {
     return new Pt(this.v)
   }
 
-  magnitude(): number {
+  get magnitude(): number {
     return this.v.magnitude()
   }
 
@@ -104,6 +104,11 @@ export class CartesianCoordinate {
 
   static divide(a: CartesianCoordinate, s: number|PowerScalar) {
     return this.fromRaw(a.v.$divide(typeof s === 'number' ? s : s.toNumber()))
+  }
+
+  static pow(a: CartesianCoordinate, s: number|PowerScalar) {
+    const _s = typeof s === 'number' ? s : s.toNumber()
+    return this.multiply(a, a.v.magnitude() ** (_s - 1))
   }
 
   /**
