@@ -21,9 +21,9 @@ Run all tests with `npm run test`.
 Pass opts and file patterns to `mocha` with `npm run _test -- <opts> <files>`.
 
 - Run tests in a given file with 
-`npm run _test -- <file>`.
+`npm run _test -- <files>`.
 - Run tests with a given substring in the description with 
-`npm run _test -- -f <name>`.
+`npm run _test -- -f <name> <files>`.
 
 ## Filesystem
 

@@ -4,7 +4,7 @@ import { parsePowerScalar, PowerScalar } from "../scalar"
 import { RadixType } from "../scalar/radix"
 import { VectorType } from "../vector/const"
 import Tetracoordinate from "../vector/tetracoordinate"
-import { ABS_GROUP_OP, DIV_OP, EXP_OP, IRR_SUFFIX_DOTS, IRR_SUFFIX_I, IRR_SUFFIX_OP, ITEM_DELIM_OP, MUL_OP, NEG_OP, POS_OP, RADIX_PREFIX, RADIX_PREFIX_OP, VEC_ACCESS_OP } from "./symbol"
+import { ABS_GROUP_OP, DIV_OP, EXP_OP, GROUP_OP, IRR_SUFFIX_DOTS, IRR_SUFFIX_I, IRR_SUFFIX_OP, ITEM_DELIM_OP, MUL_OP, NEG_OP, POS_OP, RADIX_PREFIX, RADIX_PREFIX_OP, VEC_ACCESS_OP } from "./symbol"
 
 type ExpressionValueSingleton = number|PowerScalar|Tetracoordinate|CartesianCoordinate
 /**
@@ -314,6 +314,9 @@ function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixTy
       // convert ['[]' a='tc' b=[ <scalar-node>]] to Tetracoordinate
       return new Tetracoordinate(_b as number|PowerScalar)
     }
+  }
+  else if (op === GROUP_OP && b === undefined) {
+    return parseExpressionTree(a as ExpressionTree)
   }
   else if (op !== undefined) {
     // operator expression

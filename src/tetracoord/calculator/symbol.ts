@@ -58,6 +58,10 @@ export const EXP_OP = '**'
  * Scalar absolute value and vector magnitude group operator.
  */
 export const ABS_GROUP_OP = '||'
+/**
+ * Parenthesis group operator.
+ */
+export const GROUP_OP = '()'
 
 export const COSPI6_CONST = 'cospi6'
 export const SINPI6_CONST = 'sinpi6'

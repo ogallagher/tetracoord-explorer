@@ -19,8 +19,8 @@ function testEvalExpression(expr: string) {
   }
 }
 
-describe('tetracoord.calculator', () => {
-  describe('expression', () => {
+describe('tetracoord', () => {
+  describe('calculator', () => {
     describe('literal', () => {
       it('preparses scalar literals', () => {
         let actual: string
@@ -67,7 +67,12 @@ describe('tetracoord.calculator', () => {
           ['-0q320.1i', new PowerScalar({digits: new Uint8Array([0b11100001]), radix: RadixType.Q, power: -1, sign: -1, irrational: true})],
         ]) {
           actual = testEvalExpression(input as string)
-          assert.deepStrictEqual(actual, expected, `mismatch for input=${input}`)
+          if (typeof expected === 'number') {
+            assert.strictEqual(actual, expected, `mismatch for input=${input}`)
+          }
+          else {
+            assert.deepStrictEqual(actual, expected, `mismatch for input=${input}`)
+          }
         }
       })
   
@@ -143,7 +148,7 @@ describe('tetracoord.calculator', () => {
           }
         }
       })
-    }),
+    })
 
     describe('arithmetic', () => {
       describe('scalar', () => {
@@ -324,6 +329,34 @@ describe('tetracoord.calculator', () => {
             }
           }
         })
+      })
+    })
+
+    describe('groups and operation order', () => {
+      it('evals groups', () => {
+        let actual: ExpressionValue
+  
+        for (let [input, expected] of [
+          // scalar
+          ['((((12))+(1-1)))', 12],
+          ['(1+2)*(3+1)**0.5', 6],
+          ['(0d1 + 0b10) * (0q3 + 1) ** 0b0.1', parsePowerScalar(6, RadixType.D)],
+          ['cospi6**(1+1)', TRIG_COS_PI_OVER_6**2],
+  
+          // ccoord
+          ['cc[3, (2*2)]', new Ccoord(3, 4)],
+  
+          // tcoord
+          ['tc[(0d2 * 0d2)]', new Tcoord(parsePowerScalar(4, RadixType.D))]
+        ]) {
+          actual = testEvalExpression(input as string)
+          if (typeof expected === 'number') {
+            assert.strictEqual(actual, expected, `mismatch for input=${input}`)
+          }
+          else {
+            assert.deepStrictEqual(actual, expected, `mismatch for input=${input}`)
+          }
+        }
       })
     })
   })
