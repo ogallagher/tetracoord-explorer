@@ -1,3 +1,7 @@
+import { B_IRR_DENOMINATOR } from "./binary"
+import { D_IRR_DENOMINATOR } from "./decimal"
+import { Q_IRR_DENOMINATOR } from "./quaternary"
+
 export enum RadixType {
   /**
    * Radix type label for binary (base-2).
@@ -22,7 +26,7 @@ export function radixTypeToValue(r: RadixType) {
     case RadixType.D:
       return 10
     default:
-      throw new Error(`invalid radix type ${r}`)
+      throw new Error(`invalid radix ${r}`)
   }
 }
 
@@ -35,6 +39,23 @@ export function radixValueToType(r: number) {
     case 10:
       return RadixType.D
     default:
-      throw new Error(`invalid radix type ${r}`)
+      throw new Error(`invalid radix ${r}`)
+  }
+}
+
+/**
+ * @param r Radix
+ * @returns Denominator to convert irrational trailing digit to a float number.
+ */
+export function radixToIrrDen(r: RadixType) {
+  switch (r) {
+    case RadixType.B:
+      return B_IRR_DENOMINATOR
+    case RadixType.Q:
+      return Q_IRR_DENOMINATOR
+    case RadixType.D:
+      return D_IRR_DENOMINATOR
+    default:
+      throw new Error(`invalid radix ${r}`)
   }
 }

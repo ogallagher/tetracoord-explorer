@@ -1,7 +1,7 @@
 import { ByteLevelOrder, Imaginary, imaginary } from "./byte"
 import { B_BITS_PER_LEVEL, B_LEVELS_PER_BYTE, B_VALUES_PER_LEVEL, BITS_PER_BYTE } from "./binary"
 import { Q_BITS_PER_LEVEL, Q_LEVELS_PER_BYTE, Q_VALUES_PER_LEVEL } from "./quaternary"
-import { RadixType, radixTypeToValue, radixValueToType } from "./radix"
+import { RadixType, radixToIrrDen, radixTypeToValue, radixValueToType } from "./radix"
 import { IRR_SUFFIX_I, NEG_OP, RADIX_PREFIX, WHOL_FRAC_DELIM } from "../calculator/symbol"
 import { RawScalar, RawScalarType, Sign } from "./const"
 
@@ -77,15 +77,20 @@ export class PowerScalar {
 
   /**
    * Convert to standard scalar (float) number.
-   * 
-   * // TODO handle irrational
    */
   toNumber(signed: boolean = true): number {
     let num: number
+    let irrDigit: string
+    const radix: number = radixTypeToValue(this.radix)
 
     if (typeof this.digits === 'number') {
       // decimal
       num = this.digits * Math.pow(10, this.power)
+
+      if (this.irrational) {
+        const str = this.digits.toString(10)
+        irrDigit = str[str.length-1]
+      }
     }
     else {
       // bytes
@@ -108,8 +113,33 @@ export class PowerScalar {
       }
 
       if (!powerPositive) {
-        num /= radixTypeToValue(this.radix) ** -this.power
+        num *= radix ** this.power
       }
+
+      if (this.irrational) {
+        const irrByteDigits: string = (
+          (
+            this.levelOrder === ByteLevelOrder.LOW_FIRST 
+            ? this.digits.at(0)
+            : this.digits.at(this.digits.byteLength-1)
+          ) as number
+        ).toString(radix)
+        irrDigit = irrByteDigits[this.levelOrder === ByteLevelOrder.LOW_FIRST ? 0 : irrByteDigits.length-1]
+      }
+    }
+
+    if (this.irrational) {
+      // add irrational trailing least significant digits
+      const irrFrac = (
+        // digit
+        Number.parseInt(irrDigit, radix)
+        // power
+        * radix ** this.power
+        // denominator
+        / radixToIrrDen(this.radix)
+      )
+
+      num += irrFrac
     }
 
     return signed ? num * this.sign : num
@@ -434,7 +464,8 @@ export function parseRawDigits(rawNum: number|string, levelOrder: ByteLevelOrder
 /**
  * @param rawNum Raw fractional scalar number without radix.
  * @param radix 
- * @param irrational Whether least significant digit is infinitely repeating. Note this will be overridden as `true` if least significant digit is zero.
+ * @param irrational Whether least significant digit is infinitely repeating. 
+ * Note this will be overridden as `false` if least significant digit is zero.
  */
 export function parsePowerScalar(
   rawNum: number|string,

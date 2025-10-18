@@ -269,7 +269,7 @@ export class Tetracoordinate {
   /**
    * // TODO handle irrationals
    * 
-   * // TODO implement within {@linkcode PowerScalar}
+   * // TODO implement rationals within {@linkcode PowerScalar}
    * 
    * @param other {Tetracoordinate} Other tcoord for comparison.
    * 

@@ -104,9 +104,9 @@ describe('tetracoord', () => {
           ['cc[5, 6.1]', new Ccoord(5, 6.1)],
           ['cc[cospi6, -sinpi6]', new Ccoord(TRIG_COS_PI_OVER_6, -TRIG_SIN_PI_OVER_6)],
           [
-            'cc[-0q11i, 0q12.1]', 
+            'cc[-0q11, 0q12.1]', 
             new Ccoord(
-              new PowerScalar({digits: new Uint8Array([0b0101]), sign: -1, irrational: true}), 
+              new PowerScalar({digits: new Uint8Array([0b0101]), sign: -1}), 
               new PowerScalar({digits: new Uint8Array([0b011001]), radix: RadixType.Q, power: -1})
             )
           ]
