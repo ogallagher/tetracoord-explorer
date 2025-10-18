@@ -1,21 +1,10 @@
-import { parse, nary, token, err, unary } from "subscript"
-import { PREC_ACCESS, PREC_TOKEN } from "subscript/const"
-import CartesianCoordinate, { TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6 } from "../vector/cartesian"
+import { parse } from "./parser"
+import CartesianCoordinate from "../vector/cartesian"
 import { parsePowerScalar, PowerScalar } from "../scalar"
 import { RadixType } from "../scalar/radix"
 import { VectorType } from "../vector/const"
 import Tetracoordinate from "../vector/tetracoordinate"
-import { COSPI6_CONST, DIV_OP, EXP_OP, IRR_SUFFIX_DOTS, IRR_SUFFIX_I, IRR_SUFFIX_OP, ITEM_DELIM_OP, MUL_OP, NEG_OP, POS_OP, RADIX_PREFIX, RADIX_PREFIX_OP, SINPI6_CONST, VEC_ACCESS_OP } from "./symbol"
-
-// parser handle exponent
-import "subscript/feature/pow.js"
-// parser handle literal number radix prefix as <radix> @ <raw-fractional-value>
-nary(RADIX_PREFIX_OP, PREC_ACCESS)
-// parser handle literal number irrational suffix as <raw-fractional-value> ~
-unary(IRR_SUFFIX_OP, PREC_ACCESS+1, true)
-// parser handle trig constant
-token(COSPI6_CONST, PREC_TOKEN, a => a ? err() : [, TRIG_COS_PI_OVER_6])
-token(SINPI6_CONST, PREC_TOKEN, a => a ? err() : [, TRIG_SIN_PI_OVER_6])
+import { ABS_GROUP_OP, DIV_OP, EXP_OP, IRR_SUFFIX_DOTS, IRR_SUFFIX_I, IRR_SUFFIX_OP, ITEM_DELIM_OP, MUL_OP, NEG_OP, POS_OP, RADIX_PREFIX, RADIX_PREFIX_OP, VEC_ACCESS_OP } from "./symbol"
 
 type ExpressionValueSingleton = number|PowerScalar|Tetracoordinate|CartesianCoordinate
 /**
@@ -113,6 +102,36 @@ function parseScalarNode(node: ExpressionTree, radixType: RadixType): PowerScala
   }
 }
 
+function evalNegate(a: ExpressionValueSingleton): ExpressionValueSingleton {
+  if (typeof a === 'number') {
+    return -a
+  }
+  else if (a instanceof PowerScalar) {
+    return a.negate()
+  }
+  else if (a instanceof Tetracoordinate) {
+    return a.negateFromCartesian()
+  }
+  else if (a instanceof CartesianCoordinate) {
+    return a.negate()
+  }
+}
+
+function evalAbs(a: ExpressionValueSingleton): ExpressionValueSingleton {
+  if (typeof a === 'number') {
+    return Math.abs(a)
+  }
+  else if (a instanceof PowerScalar) {
+    return PowerScalar.abs(a)
+  }
+  else if (a instanceof Tetracoordinate) {
+    return a.magnitudeFromCartesian
+  }
+  else if (a instanceof CartesianCoordinate) {
+    return a.magnitude
+  }
+}
+
 function evalAddSub(op: '-'|'+', a: ExpressionValueSingleton, b: ExpressionValueSingleton): ExpressionValueSingleton {
   if (typeof a === 'number' && typeof b === 'number') {
     // simple scalar
@@ -178,8 +197,8 @@ function evalMulDiv(op: '*'|'/', a: ExpressionValueSingleton, b: ExpressionValue
       // power scalar
       return (
         op === MUL_OP
-        ? PowerScalar.subtract(_a as number|PowerScalar, _b as number|PowerScalar)
-        : PowerScalar.add(_a as number|PowerScalar, _b as number|PowerScalar)
+        ? PowerScalar.multiply(_a as number|PowerScalar, _b as number|PowerScalar)
+        : PowerScalar.divide(_a as number|PowerScalar, _b as number|PowerScalar)
       )
     }
     else {
@@ -235,18 +254,7 @@ function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixTy
       // unary
       if (op === NEG_OP) {
         // negate 
-        if (typeof _a === 'number') {
-          return -_a
-        }
-        else if (_a instanceof PowerScalar) {
-          return _a.negate()
-        }
-        else if (_a instanceof Tetracoordinate) {
-          return _a.negateFromCartesian()
-        }
-        else if (_a instanceof CartesianCoordinate) {
-          return _a.negate()
-        }
+        return evalNegate(_a as ExpressionValueSingleton)
       }
       else {
         // positive (identity)
@@ -258,6 +266,9 @@ function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixTy
       const _b = parseExpressionTree(b as ExpressionTree)
       return evalAddSub(op, _a as ExpressionValueSingleton, _b as ExpressionValueSingleton)
     }
+  }
+  else if (op === ABS_GROUP_OP && b === undefined) {
+    return evalAbs(parseExpressionTree(a as ExpressionTree) as ExpressionValueSingleton)
   }
   else if (op === MUL_OP || op === DIV_OP) {
     return evalMulDiv(

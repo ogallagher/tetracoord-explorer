@@ -25,3 +25,16 @@ export function radixTypeToValue(r: RadixType) {
       throw new Error(`invalid radix type ${r}`)
   }
 }
+
+export function radixValueToType(r: number) {
+  switch (r) {
+    case 2:
+      return RadixType.B
+    case 4:
+      return RadixType.Q
+    case 10:
+      return RadixType.D
+    default:
+      throw new Error(`invalid radix type ${r}`)
+  }
+}

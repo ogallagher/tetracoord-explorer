@@ -1,7 +1,7 @@
 import { ByteLevelOrder, Imaginary, imaginary } from "./byte"
 import { B_BITS_PER_LEVEL, B_LEVELS_PER_BYTE, B_VALUES_PER_LEVEL, BITS_PER_BYTE } from "./binary"
 import { Q_BITS_PER_LEVEL, Q_LEVELS_PER_BYTE, Q_VALUES_PER_LEVEL } from "./quaternary"
-import { RadixType, radixTypeToValue } from "./radix"
+import { RadixType, radixTypeToValue, radixValueToType } from "./radix"
 import { IRR_SUFFIX_I, NEG_OP, RADIX_PREFIX, WHOL_FRAC_DELIM } from "../calculator/symbol"
 import { RawScalar, RawScalarType, Sign } from "./const"
 
@@ -80,7 +80,7 @@ export class PowerScalar {
    * 
    * // TODO handle irrational
    */
-  toNumber(): number {
+  toNumber(signed: boolean = true): number {
     let num: number
 
     if (typeof this.digits === 'number') {
@@ -108,70 +108,77 @@ export class PowerScalar {
       }
 
       if (!powerPositive) {
-        num /= Math.pow(radixTypeToValue(this.radix), -this.power)
+        num /= radixTypeToValue(this.radix) ** -this.power
       }
     }
 
-    return num * this.sign
+    return signed ? num * this.sign : num
   }
 
   /**
-   * Format nominal digits without radix prefix or irrational suffix.
+   * Format nominal (positive) digits without radix prefix or irrational suffix.
    * 
    * @param radix Target radix for converting from {@linkcode PowerScalar.radix this.radix}.
    */
   toDigitString(radix?: RadixType, showPower: boolean = true): string {
     radix = radix || this.radix
-    const radixValue = radixTypeToValue(radix)
 
-    // format digits
-    let digitStr: string
-    if (this.radix === RadixType.D) {
-      digitStr = (this.digits as number).toString(radixValue)
-    }
-    else {
-      const bytes = (this.digits as Uint8Array)
-      const byteStrs: string[] = new Array(bytes.byteLength)
+    if (this.radix === radix) {
+      const fromRadix = radixTypeToValue(this.radix)
 
-      bytes.forEach((byte, index) => {
-        byteStrs[index] = byte.toString(radixValue)
-      })
-
-      digitStr = byteStrs.join('')
-    }
-
-    if (showPower) {
-      // format negative power with decimal point
-      if (this.power < 0) {
-        const pointIndex = (
-          this.levelOrder === ByteLevelOrder.HIGH_FIRST
-          ? digitStr.length + this.power
-          : -this.power
-        )
-
-        digitStr = digitStr.substring(0, pointIndex) + WHOL_FRAC_DELIM + digitStr.substring(pointIndex)
+      // format digits in fromRadix
+      let digitStr: string
+      if (this.radix === RadixType.D) {
+        digitStr = (this.digits as number).toString(fromRadix)
       }
-      // format positive power with trailing least significant digit
-      else if (this.power > 0) {
-        const leastTrail: string = (
-          new Array(this.power)
-          .fill(
-            this.irrational
-            ? digitStr[this.levelOrder === ByteLevelOrder.HIGH_FIRST ? digitStr.length-1 : 0]
-            : '0'
-          )
+      else {
+        digitStr = (
+          (this.digits as Uint8Array).values()
+          .map(byte => byte.toString(fromRadix))
+          .toArray()
           .join('')
         )
-        
-        digitStr = (
-          this.levelOrder === ByteLevelOrder.HIGH_FIRST
-          ? digitStr + leastTrail
-          : leastTrail + digitStr
-        )
       }
-    }
 
-    return digitStr
+      // format power
+      if (showPower) {
+        // format negative power with decimal point
+        if (this.power < 0) {
+          const pointIndex = (
+            this.levelOrder === ByteLevelOrder.HIGH_FIRST
+            ? digitStr.length + this.power
+            : -this.power
+          )
+
+          digitStr = digitStr.substring(0, pointIndex) + WHOL_FRAC_DELIM + digitStr.substring(pointIndex)
+        }
+        // format positive power with trailing least significant digit
+        else if (this.power > 0) {
+          const leastTrail: string = (
+            new Array(this.power)
+            .fill(
+              this.irrational
+              ? digitStr[this.levelOrder === ByteLevelOrder.HIGH_FIRST ? digitStr.length-1 : 0]
+              : '0'
+            )
+            .join('')
+          )
+          
+          digitStr = (
+            this.levelOrder === ByteLevelOrder.HIGH_FIRST
+            ? digitStr + leastTrail
+            : leastTrail + digitStr
+          )
+        }
+      }
+
+      return digitStr
+    }
+    else {
+      // convert radix with Number.toString
+      const toRadix = radixTypeToValue(radix)
+      return this.toNumber(false).toString(toRadix)
+    }
   }
 
   /**
@@ -179,28 +186,32 @@ export class PowerScalar {
    * 
    * @param radix 
    */
-  toString(radix?: RadixType) {
+  toString(radix?: RadixType|number, showRadixPrefix: boolean = true) {
+    radix = (typeof radix === 'number') ? radixValueToType(radix) : radix
     const digitStr = this.toDigitString(radix)
 
     // format irrational
     const irrationalSuffix = (this.irrational ? IRR_SUFFIX_I : '')
 
-    return (
-      `${RADIX_PREFIX}${radix || this.radix}${digitStr}${irrationalSuffix}`
-    )
+    return [
+      this.sign < 0 ? NEG_OP : '',
+      showRadixPrefix ? `${RADIX_PREFIX}${radix || this.radix}` : '',
+      digitStr,
+      irrationalSuffix
+    ].join('')
   }
 
-  private static toNumbers(a: number|PowerScalar, b: number|PowerScalar) {
+  private static toNumbers(a: number|PowerScalar, b?: number|PowerScalar) {
     const v = {
       a: typeof a === 'number' ? a : a.toNumber(),
-      b: typeof b === 'number' ? b : b.toNumber()
+      b: ((typeof b === 'number' || b === undefined) ? b : b.toNumber()) as number
     }
 
     const tr = {
       at: getRawScalarType(a),
-      bt: getRawScalarType(b),
+      bt: (b !== undefined) && getRawScalarType(b) || undefined,
       ar: getRadix(a),
-      br: getRadix(b)
+      br: (b !== undefined && getRadix(b)) || undefined
     }
 
     return {...v, ...tr}
@@ -218,7 +229,7 @@ export class PowerScalar {
    * @param a 
    * @param b 
    */
-  protected static eval(op: (a: number, b: number) => number, a: number|PowerScalar, b: number|PowerScalar): PowerScalar {
+  protected static eval(op: (a: number, b?: number) => number, a: number|PowerScalar, b?: number|PowerScalar): PowerScalar {
     const n = this.toNumbers(a, b)
     const c = op(n.a, n.b)
     
@@ -241,14 +252,35 @@ export class PowerScalar {
    * Subtract scalars. See {@linkcode PowerScalar.eval} for common implementation details.
    */
   static subtract(a: number|PowerScalar, b: number|PowerScalar): PowerScalar {
-    return this.eval((a,b) => a-b, a, b)
+    return this.eval((a,b) => a - b, a, b)
+  }
+
+  /**
+   * Multiply scalars. See {@linkcode PowerScalar.eval} for common implementation details.
+   */
+  static multiply(a: number|PowerScalar, b: number|PowerScalar): PowerScalar {
+    return this.eval((a,b) => a * b, a, b)
+  }
+
+  /**
+   * Divide scalars. See {@linkcode PowerScalar.eval} for common implementation details.
+   */
+  static divide(a: number|PowerScalar, b: number|PowerScalar): PowerScalar {
+    return this.eval((a,b) => a / b, a, b)
   }
 
   /**
    * Raise a scalar to an exponent. See {@linkcode PowerScalar.eval} for common implementation details.
    */
   static pow(a: number|PowerScalar, b: number|PowerScalar): PowerScalar {
-    return this.eval((a,b) => a**b, a, b)
+    return this.eval((a,b) => a ** b, a, b)
+  }
+
+  /**
+   * Absolute value of a scalar. See {@linkcode PowerScalar.eval} for common implementation details.
+   */
+  static abs(a: number|PowerScalar) {
+    return this.eval((a) => Math.abs(a), a)
   }
 }
 

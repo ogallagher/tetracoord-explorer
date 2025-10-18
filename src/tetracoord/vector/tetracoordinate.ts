@@ -291,6 +291,10 @@ export class Tetracoordinate {
     }
   }
 
+  get magnitudeFromCartesian() {
+    return this.toCartesianCoord().magnitude
+  }
+
   // arithmetic
 
   /**
