@@ -125,6 +125,10 @@ describe('tetracoord', () => {
           // tc to cc
           ['cc[tc[0q3]]', new Ccoord(TRIG_COS_PI_OVER_6, -TRIG_SIN_PI_OVER_6)],
           ['cc[-tc[0q101]]', new Ccoord(0, -3)], // -0q101 === 0q011
+          ['cc[-tc[0q101.1i]]', new Ccoord(0, -2)],
+          ['cc[-tc[0q101i]]', new Ccoord(0, -2)],
+          ['cc[tc[0q3i]]', new Ccoord(2*TRIG_COS_PI_OVER_6, -2*TRIG_SIN_PI_OVER_6)],
+          ['cc[tc[0q0.3i]]', new Ccoord(-TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6)],
 
           // cc to tc
           ['tc[cc[0, 1]]', new Tcoord('1')],

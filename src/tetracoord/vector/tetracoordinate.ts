@@ -173,9 +173,73 @@ export class Tetracoordinate {
   }
 
   /**
+   * @param d Quaternary digit.
+   * @param o Orientation.
+   * @param l Digit level.
+   * @param f Whether tcoord unit vectors are flipped compared to base level 0.
+   */
+  protected static digitToCartesian(d: string|number, o: Orientation, l: number, f: boolean): Pt {
+    const q: number = Tetracoordinate.reorientDigit(d, o)
+
+    // find unit ccoord (level=0)
+    let uc: RawCartesianCoord
+    switch (q) {
+      case 0:
+        uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.ZERO)
+        break
+
+      case 1:
+        uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.ONE)
+        break
+
+      case 2:
+        uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.TWO)
+        break
+
+      case 3:
+        uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.THREE)
+        break
+
+      case -1:
+        uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.NONE)
+        break
+
+      case -2:
+        uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.NTWO)
+        break
+
+      case -3:
+        uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.NTHREE)
+        break
+
+      case 4:
+        uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.FOUR)
+        break
+
+      case -4:
+        uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.NFOUR)
+        break
+
+      default:
+        throw new Error(`invalid digit=${q} at orientation=${o}`)
+    }
+
+    let v = new Pt(uc)
+
+    // flip
+    if (f) {
+      v.multiply(-1)
+    }
+
+    // scale
+    v.multiply(2 ** l)
+
+    // add component to vectors
+    return v
+  }
+
+  /**
    * Get equivalent cartesian point.
-   * 
-   * // TODO handle irrational
    * 
    * @param {Orientation} orientation
    * 
@@ -188,80 +252,33 @@ export class Tetracoordinate {
 
     // for each quad digit, calculate unit cartesian vector, and flip+scale by level power,
     // from highest to lowest power
-    let quads: string[] = this.getQuadStrs()
+    const digits: string[] = this.getQuadStrs()
     if (this.value.levelOrder === ByteLevelOrder.LOW_FIRST) {
-      quads.reverse()
+      digits.reverse()
     }
-    let vectors: Pt[] = new Array(this.num_levels)
+    const vectors: Pt[] = new Array(this.num_levels)
     let level = this.num_levels - 1 + this.value.power
     let level_even: boolean = level % 2 == 0
+    let d: string
     for (let i = 0; i < this.num_levels; i++) {
-      const q: number = Tetracoordinate.reorientDigit(quads[i], orientation)
-
-      // find unit ccoord (level=0)
-      let uc: RawCartesianCoord
-      switch (q) {
-        case 0:
-          uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.ZERO)
-          break
-
-        case 1:
-          uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.ONE)
-          break
-
-        case 2:
-          uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.TWO)
-          break
-
-        case 3:
-          uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.THREE)
-          break
-
-        case -1:
-          uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.NONE)
-          break
-
-        case -2:
-          uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.NTWO)
-          break
-
-        case -3:
-          uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.NTHREE)
-          break
-
-        case 4:
-          uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.FOUR)
-          break
-
-        case -4:
-          uc = Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.NFOUR)
-          break
-
-        default:
-          throw new Error(`invalid quad[${i}<${this.num_levels}]=${q} in ${this}`)
-      }
-
-      let v = new Pt(uc)
-
-      // flip
-      if (!level_even) {
-        v.multiply(-1)
-      }
-
-      // scale
-      v.multiply(Math.pow(2, level))
-
       // add component to vectors
-      vectors[i] = v
+      d = digits[i]
+      vectors[i] = Tetracoordinate.digitToCartesian(d, orientation, level, !level_even)
 
       level--
-      if (q === 0) {
+      if (d === '0') {
         // update flip for entering center cell only
         level_even = !level_even
       }
     }
 
     let vector = vectors.reduce((prev, curr) => prev.add(curr))
+
+    if (this.value.irrational) {
+      // least significant (nonzero) digit repeats forever; add as another component vector at same level,
+      // given that d.di = d + d
+      vector.add(vectors[this.num_levels-1])
+    }
 
     return CartesianCoordinate.fromRaw(vector)
   }
