@@ -7,7 +7,7 @@
 import 'bootstrap/dist/css/bootstrap.css'
 import '../public/style.css'
 
-import { useEffect } from 'react'
+import { useEffect } from "react"
 
 // components
 

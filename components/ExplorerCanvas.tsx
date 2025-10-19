@@ -10,7 +10,7 @@ import {
     Vector2D,
     TetracoordSpace,
     TetracoordCell
-} from "../src/tetracoords"
+} from "../src/tetracoord"
 
 interface ExplorerCanvasProps {
     flip_y: boolean
