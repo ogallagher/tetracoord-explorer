@@ -4,9 +4,9 @@ import { parsePowerScalar, PowerScalar } from "../src/tetracoord/scalar"
 import { RadixType } from "../src/tetracoord/scalar/radix"
 import { ByteLevelOrder } from "../src/tetracoord/scalar/byte"
 
-function testParsePowerScalar(d: number|string, r: RadixType, i: boolean) {
+function testParsePowerScalar(d: number|string, r: RadixType, i: boolean, o?: ByteLevelOrder) {
   try {
-    return parsePowerScalar(d as number|string, r as RadixType, i)
+    return parsePowerScalar(d as number|string, r as RadixType, i, o)
   }
   catch (err) {
     throw new Error(`PowerScalar parse error at d=${d} r=${r}`, {cause: err})
@@ -18,8 +18,8 @@ describe('scalar', () => {
     let ps: PowerScalar
     let actual: number
 
-    const testNumeric = (d: number|string, r: RadixType, expected: number, precision: number = 20, i: boolean = false) => {
-      ps = testParsePowerScalar(d as number|string, r as RadixType, i)
+    const testNumeric = (d: number|string, r: RadixType, expected: number, precision: number = 20, i: boolean = false, o?: ByteLevelOrder) => {
+      ps = testParsePowerScalar(d as number|string, r as RadixType, i, o)
       try {
         actual = ps.toNumber()
       }
@@ -35,15 +35,17 @@ describe('scalar', () => {
     }
 
     it('converts to number', () => {
-      for (let [d, r, expected] of [
+      for (let [d, r, expected, order] of [
         ['5.5', RadixType.D, 5.5],
         [-5.5, RadixType.D, -5.5],
         ['3.2', RadixType.Q, 3.5],
         ['3.1', RadixType.Q, 3.25],
         ['11.01', RadixType.B, 3.25],
-        ['3.001', RadixType.Q, 3.015625]
+        ['3.001', RadixType.Q, 3.015625],
+        ['1103.2222222222', RadixType.Q, 83.66666603088379],
+        ['2222222222.3011', RadixType.Q, 83.66666603088379, ByteLevelOrder.LOW_FIRST]
       ]) {
-        testNumeric(d, r as RadixType, expected as number)
+        testNumeric(d, r as RadixType, expected as number, undefined, undefined, order as ByteLevelOrder)
       }
     })
 

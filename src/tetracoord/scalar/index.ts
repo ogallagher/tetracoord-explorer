@@ -32,6 +32,9 @@ export class PowerScalar {
    * Whether least significant digit repeats infinitely as fractional digits after decimal point.
    */
   irrational: boolean
+  /**
+   * Order that levels are stored within each byte, and that the bytes are stored in the byte array.
+   */
   levelOrder: ByteLevelOrder
 
   constructor({digits: d, radix: r = undefined, power: p = 0, sign: s = 1, irrational: i = false, levelOrder: o = ByteLevelOrder.DEFAULT} : {
@@ -176,7 +179,25 @@ export class PowerScalar {
       else {
         digitStr = (
           (this.digits as Uint8Array).values()
-          .map(byte => byte.toString(fromRadix))
+          .map((byte, index) => {
+            let s = byte.toString(fromRadix)
+            const levelsPerByte = this.radix === RadixType.B ? B_LEVELS_PER_BYTE : Q_LEVELS_PER_BYTE
+
+            if (
+              this.levelOrder === ByteLevelOrder.HIGH_FIRST
+              ? (index > 0)
+              : (index < (this.digits as Uint8Array).length-1)
+            ) {
+              return (
+                this.levelOrder === ByteLevelOrder.HIGH_FIRST
+                ? s.padStart(levelsPerByte, '0')
+                : s.padEnd(levelsPerByte, '0')
+              )
+            }
+            else {
+              return s
+            }
+          })
           .toArray()
           .join('')
         )
