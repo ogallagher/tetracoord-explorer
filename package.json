@@ -21,9 +21,13 @@
     "typescript",
     "geometry",
     "2d",
+    "vector",
     "math",
     "number-system",
-    "arithmetic"
+    "arithmetic",
+    "space-filling-curve",
+    "fractal",
+    "sierpinski-triangle"
   ],
   "author": "Owen Gallagher",
   "license": "SEE LICENSE IN license.txt",
@@ -37,11 +41,11 @@
     "@types/pino": "^7.0.4",
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",
+    "@types/yargs": "^17.0.33",
     "mocha": "^11.7.4",
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@a-robu/victor": "^2.2.2",
     "acorn": "^8.8.0",
     "bootstrap": "^5.2.0",
     "next": "^12.2.3",
@@ -50,10 +54,11 @@
     "pts-math": "^0.12.9",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "save-optional": "^1.0.0",
     "subscript": "^9.1.0"
   },
   "optionalDependencies": {
-    "tsx": "^4.20.6"
+    "pino-pretty": "^13.1.2",
+    "tsx": "^4.20.6",
+    "yargs": "^18.0.0"
   }
 }

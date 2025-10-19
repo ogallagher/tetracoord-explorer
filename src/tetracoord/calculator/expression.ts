@@ -5,6 +5,7 @@ import { RadixType } from "../scalar/radix"
 import { VectorType } from "../vector/const"
 import Tetracoordinate from "../vector/tetracoordinate"
 import { ABS_GROUP_OP, DIV_OP, EQ_LOOSE_OP, EQ_STRICT_OP, EXP_OP, GROUP_OP, IRR_SUFFIX_DOTS, IRR_SUFFIX_I, IRR_SUFFIX_OP, ITEM_DELIM_OP, MUL_OP, NEG_OP, NEQ_STRICT_OP, POS_OP, RADIX_PREFIX, RADIX_PREFIX_OP, VEC_ACCESS_OP } from "./symbol"
+import pino from 'pino'
 
 type ExpressionValueSingleton = number|PowerScalar|Tetracoordinate|CartesianCoordinate|boolean
 /**
@@ -17,6 +18,8 @@ export type ExpressionValue = ExpressionValueSingleton|ExpressionValueCollection
 
 export type ExpressionLeaf = ExpressionValue|string|null|undefined
 export type ExpressionTree = (ExpressionLeaf|ExpressionTree)[]
+
+export const logger = pino({name: 'calculator.expression'})
 
 /**
  * Translate true tetracoord calculator expression to intermediate syntax for parser compatibility.
@@ -396,9 +399,28 @@ function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixTy
   }
 }
 
-export function evalExpression(expr: string) {
+export function evalExpression(expr: string, formatRadix?: RadixType, formatVector?: VectorType) {
+  logger.info(`parse raw expression=${expr}`)
+
   expr = preparseExpression(expr)
+  logger.debug(`preparsed expression=${expr}`)
   
-  const tree = parseExpressionTree(parse(expr))
-  return tree
+  const res = parseExpressionTree(parse(expr)) as ExpressionValueSingleton
+  logger.debug(`raw result=${res}`)
+
+  if (res instanceof Tetracoordinate && formatVector === VectorType.CCoord) {
+    return res.toCartesianCoord()
+  }
+  else if (res instanceof CartesianCoordinate && formatVector === VectorType.TCoord) {
+    return Tetracoordinate.fromCartesianCoord(res)
+  }
+  else if (res instanceof PowerScalar && formatRadix !== undefined) {
+    return res.toString(formatRadix)
+  }
+  else if (typeof res === 'number' && formatRadix !== undefined) {
+    return parsePowerScalar(res, RadixType.D).toString(formatRadix, false)
+  }
+  else {
+    return res
+  }
 }
