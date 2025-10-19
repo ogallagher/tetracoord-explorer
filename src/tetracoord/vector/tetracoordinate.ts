@@ -17,7 +17,8 @@ import { VectorType } from "./const"
 
 // ts types interfaces
 
-export type Quads = number[] | string
+export type TetracoordDigit = 0|1|2|3
+export type Quads = TetracoordDigit[] | string
 export type TetracoordBytes = Uint8Array | imaginary
 
 // classes
@@ -258,7 +259,7 @@ export class Tetracoordinate {
     }
     const vectors: Pt[] = new Array(this.num_levels)
     let level = this.num_levels - 1 + this.value.power
-    let level_even: boolean = level % 2 == 0
+    let level_even: boolean = level % 2 === 0
     let d: string
     for (let i = 0; i < this.num_levels; i++) {
       // add component to vectors
@@ -440,7 +441,7 @@ export class Tetracoordinate {
    * according to internal quad order.
    */
   getQuadStrs(): string[] {
-    let quads = this.value.toDigitString(RadixType.Q, false).split('')
+    let quads = [...this.value.toDigitString(RadixType.Q, false)]
 
     if (quads.length > this.num_levels) {
       // remove leading/trailing zeros to match populated levels
@@ -477,7 +478,9 @@ export class Tetracoordinate {
    * 
    * @param ccoord Cartesian coord to convert.
    * @param precision Precision determines min level for rounding to nearest tcoord.
-   * @param quad_order 
+   * @param allowIrrational Whether the tcoord can be irrational. If `false`, the tcoord will always be 
+   * a cell centroid at level `precision`. If `true`, it can also be a cell vertex.
+   * @param levelOrder 
    * @param orientation
    * 
    * @returns Equivalent tcoord.
@@ -485,68 +488,83 @@ export class Tetracoordinate {
   static fromCartesianCoord(
     ccoord: RawCartesianCoord | CartesianCoordinate,
     precision: number = 0,
-    quad_order: ByteLevelOrder = ByteLevelOrder.DEFAULT,
+    allowIrrational: boolean = true,
+    levelOrder: ByteLevelOrder = ByteLevelOrder.DEFAULT,
     orientation: Orientation = Orientation.DEFAULT
   ): Tetracoordinate {
     precision = Math.trunc(precision)
-    const min_dist = this.cellRadius(precision)
+    const cellRadius = this.cellRadius(precision)
 
-    let target: CartesianCoordinate = ccoord instanceof CartesianCoordinate ? ccoord : CartesianCoordinate.fromRaw(ccoord)
+    const target: CartesianCoordinate = ccoord instanceof CartesianCoordinate ? ccoord : CartesianCoordinate.fromRaw(ccoord)
+    // console.log(`target=${target}`)
     let loc: Pt = new Pt(0, 0)
     let delta: Pt = target.v.$subtract(loc)
     let dist: number = delta.magnitude()
     let prev_loc: Pt, prev_delta: Pt, prev_dist: number
 
     // min safe level needed to reach the target
-    let scale: number = Math.ceil(Math.log2(delta.magnitude()))
-    if (scale < 0) scale = 0
+    let scale: number = Math.max(Math.ceil(Math.log2(delta.magnitude())), 0)
     let power: number = scale
     let flip = (power % 2 != 0) ? -1 : 1
 
-    let quads: number[] = []
+    const digits: TetracoordDigit[] = []
+    let irrational = false
 
     // edge case delta.magnitude=0; log2=-inf
     if (!isFinite(scale)) {
       scale = 0
       power = 0
-      quads.push(0)
+      digits.push(0)
     }
 
-    let angle_ds: number[] = new Array(3)
+    const angle_ds: number[] = new Array(3)
     let step: Pt
 
+    // rational unit vectors
     const uv_one: Pt = new Pt(Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.ONE))
     const uv_two: Pt = new Pt(Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.TWO))
     const uv_three: Pt = new Pt(Tetracoordinate.unit_to_cartesian.get(Tetracoordinate.THREE))
 
-    while (dist > min_dist && power >= precision) {
+    const doZeroStep = (): 0 => {
+      // undo step; stay in zero
+      loc = prev_loc
+      delta = prev_delta
+      dist = prev_dist
+      step.fill(0)
+
+      // flip unit vectors for next level
+      flip = -flip
+
+      return 0
+    }
+
+    const doStep = (one: Pt, two: Pt, three: Pt, _power: number): TetracoordDigit => {
       // determine closest tcoord nonzero unit vector (direction)
-      angle_ds[0] = CartesianCoordinate.angleBetween(delta, uv_one.$multiply(flip))
-      angle_ds[1] = CartesianCoordinate.angleBetween(delta, uv_two.$multiply(flip))
-      angle_ds[2] = CartesianCoordinate.angleBetween(delta, uv_three.$multiply(flip))
+      angle_ds[0] = CartesianCoordinate.angleBetween(delta, one.$multiply(flip))
+      angle_ds[1] = CartesianCoordinate.angleBetween(delta, two.$multiply(flip))
+      angle_ds[2] = CartesianCoordinate.angleBetween(delta, three.$multiply(flip))
 
       let angle_min = Math.min(...angle_ds)
-      let quad: number
+      let digit: TetracoordDigit
       switch (angle_min) {
         case angle_ds[0]:
-          step = uv_one.clone()
-          quad = 1
+          step = one.clone()
+          digit = 1
           break
 
         case angle_ds[1]:
-          step = uv_two.clone()
-          quad = 2
+          step = two.clone()
+          digit = 2
           break
 
         case angle_ds[2]:
-          step = uv_three.clone()
-          quad = 3
+          step = three.clone()
+          digit = 3
           break
       }
 
       // scale step unit vector
-      let leg = Math.pow(2, power)
-      step.multiply(leg * flip)
+      step.multiply((2 ** _power) * flip)
 
       // update loc
       prev_loc = loc.clone()
@@ -559,40 +577,52 @@ export class Tetracoordinate {
 
       // TODO improve threshold for comparing before/after step
       if (dist > prev_dist) {
-        // undo step; stay in zero
-        loc = prev_loc
-        delta = prev_delta
-        dist = prev_dist
-        step.fill(0)
-        quads.push(0)
+        digit = doZeroStep()
+      }
 
-        // flip unit vectors for next level
-        flip = -flip
-      }
-      else {
-        // add quad to number
-        quads.push(quad)
-      }
+      // console.log(`  power=${_power} flip=${flip} digit=${digit} dist=${dist} loc=${loc}`)
+      return digit
+    }
+
+    while (dist > cellRadius && power >= precision) {
+      // rational step
+      digits.push(doStep(uv_one, uv_two, uv_three, power))
       power--
     }
 
+    if (allowIrrational && dist >= cellRadius) {
+      // try irrational step to vertex
+      const digit = doStep(
+        uv_one, uv_two, uv_three,
+        // -x.0 = 0.xi    irrational at level-1 has same length as level
+        power+1
+      )
+
+      if (digit !== 0) {
+        irrational = true
+        digits.push(digit)
+        power--
+      }
+    }
+
     // add fill to significant digits scale-precision
-    let fill = new Array((scale + 1 - precision) - quads.length)
-    if (fill.length > 0) {
+    const fillLen = (scale + 1 - precision) - digits.length
+    if (fillLen > 0) {
+      const fill = new Array(fillLen)
       fill.fill(0)
-      quads = quads.concat(fill)
+      digits.push(...fill)
     }
-    else if (quads.length == 0) {
-      quads.push(0)
+    else if (digits.length === 0) {
+      digits.push(0)
     }
 
-    // convert raw quads to tcoord; apply power
-    power = scale + 1 - quads.length
+    // convert raw digits to tcoord; apply power
+    power = scale + 1 - digits.length
 
-    if (quad_order == ByteLevelOrder.LOW_FIRST) {
-      quads.reverse()
+    if (levelOrder === ByteLevelOrder.LOW_FIRST) {
+      digits.reverse()
     }
-    return new Tetracoordinate(quads, quad_order, undefined, power)
+    return new Tetracoordinate(digits, levelOrder, undefined, power, irrational)
   }
 
   /**

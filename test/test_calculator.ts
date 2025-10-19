@@ -127,7 +127,7 @@ describe('tetracoord', () => {
         }
       })
 
-      it('evals vector conversion', () => {
+      it('evals rational,irrational vector conversion', () => {
         let actual: ExpressionValue
         const tcoordCellRadius = Tcoord.cellRadius(0)
 
@@ -253,9 +253,76 @@ describe('tetracoord', () => {
             )
           }
         })
+
+        it('evals irrational vector add,subtract', () => {
+          let actual: ExpressionValue
+          const maxError = 1e-8
+
+          for (let [input, expected] of [
+            // tc
+            ['tc[0.2i] + tc[3]', new Tcoord('21')],
+            ['tc[0.2i] + tc[3]', new Ccoord(2*TRIG_COS_PI_OVER_6, 0)],
+
+            // cc
+            ['cc[3.9i, 2i] + cc[1, -0.2i]', new Ccoord(5, 2)],
+            ['cc[3.9i, 2i] - cc[-1, 0.2i]', new Ccoord(5, 2)]
+          ]) {
+            actual = testEvalExpression(input as string)
+            const _actual = (actual instanceof Ccoord) ? actual : (actual as Tcoord).toCartesianCoord()
+            const _expected = (expected instanceof Ccoord) ? expected : (expected as Tcoord).toCartesianCoord()
+
+            const dist = Ccoord.subtract(_actual, _expected).magnitude
+            assert(
+              dist < maxError,
+              `fuzzy ccoord=${actual} mismatch at input=${input} dist=${dist} maxError=${maxError}`
+            )
+          }
+        })
       })
 
       describe('semiscalar', () => {
+        function test(input: string, actual: ExpressionValue, expected: ExpressionValue, maxError?: number) {
+          if (typeof expected === 'number' || expected instanceof PowerScalar) {
+            // scalar
+            if (maxError !== undefined) {
+              const _actual = typeof actual === 'number' ? actual : (actual as PowerScalar).toNumber()
+              const _expected = typeof expected === 'number' ? expected : (expected as PowerScalar).toNumber()
+
+              assert(
+                Math.abs(_actual - _expected) < maxError,
+                `mismatch error=${_actual - _expected} for input='${input}'`
+                + ` actual=${actual}=${_actual} expected=${expected}`
+              )
+            }
+            else {
+              assert.strictEqual(
+                (actual as number|PowerScalar).toString(10), 
+                expected.toString(10), 
+                `mismatch for input=${input} actual=${actual} expected=${expected}`
+              )
+            }
+          }
+          else {
+            // vector
+            if (maxError !== undefined) {
+              const _actual = actual instanceof Tcoord ? actual.toCartesianCoord() : actual
+              const _expected = expected instanceof Tcoord ? expected.toCartesianCoord() : expected
+              const dist = Ccoord.subtract(_actual as Ccoord, _expected as Ccoord).magnitude
+              assert(
+                dist < maxError,
+                `fuzzy vector=${actual} expected=${expected} mismatch at input=${input} dist=${dist} maxError=${maxError}`
+              )
+            }
+            else {
+              assert.strictEqual(
+                expected instanceof Ccoord ? (actual as Ccoord).toString(RadixType.D) : (actual as Tcoord).toString(), 
+                expected instanceof Ccoord ? (expected as Ccoord).toString(RadixType.D) : (actual as Tcoord).toString(), 
+                `mismatch for input=${input} actual=${actual} expected=${expected}`
+              )
+            }
+          }
+        }
+
         it('evals semiscalar multiply,divide', () => {
           let actual: ExpressionValue
 
@@ -274,27 +341,14 @@ describe('tetracoord', () => {
 
             // divide
             ['55 / 11 / 10', 0.5],
-            ['0b110111 / 0q23 / 0.1', parsePowerScalar('0.1', RadixType.B)],
+            ['0b110111 / 0q23 / 10', parsePowerScalar('0.1', RadixType.B)],
             ['cc[9,6] / 1.5', new Ccoord(6, 4)],
             ['cc[9/1.5, 6/1.5] / 2', new Ccoord(3, 2)],
             ['tc[0q202] / 0d3', new Tcoord('2')],
             ['tc[0q22] / -3.0', new Tcoord('2')],
           ]) {
             actual = testEvalExpression(input as string)
-            if (typeof expected === 'number') {
-              assert.strictEqual(
-                (actual as number|PowerScalar).toString(10), 
-                expected.toString(10), 
-                `mismatch for input=${input} actual=${actual} expected=${expected}`
-              )
-            }
-            else {
-              assert.deepStrictEqual(
-                expected instanceof Ccoord ? (actual as Ccoord).toString(RadixType.D) : (actual as Tcoord).toString(), 
-                expected instanceof Ccoord ? (expected as Ccoord).toString(RadixType.D) : (actual as Tcoord).toString(), 
-                `mismatch for input=${input} actual=${actual} expected=${expected}`
-              )
-            }
+            test(input as string, actual, expected as ExpressionValue)
           }
         })
 
@@ -321,26 +375,13 @@ describe('tetracoord', () => {
             }
             else {
               actual = testEvalExpression(input as string)
-              if (typeof expected === 'number') {
-                assert.strictEqual(
-                  (actual as number|PowerScalar).toString(10), 
-                  expected.toString(10), 
-                  `mismatch for input=${input} actual=${actual} expected=${expected}`
-                )
-              }
-              else {
-                assert.deepStrictEqual(
-                  expected instanceof Ccoord ? (actual as Ccoord).toString(RadixType.D) : (actual as Tcoord).toString(), 
-                  expected instanceof Ccoord ? (expected as Ccoord).toString(RadixType.D) : (actual as Tcoord).toString(), 
-                  `mismatch for input=${input} actual=${actual} expected=${expected}`
-                )
-              }
+              test(input as string, actual, expected as ExpressionValue)
             }
           }
         })
 
         it('evals semiscalar abs,magnitude', () => {
-          let actual: ExpressionValue, _actual: number, _expected: number
+          let actual: ExpressionValue
           const maxError = 1e-7
 
           for (let [input, expected] of [
@@ -365,14 +406,44 @@ describe('tetracoord', () => {
             }
             else {
               actual = testEvalExpression(input as string)
-              _actual = typeof actual === 'number' ? actual : (actual as PowerScalar).toNumber()
-              _expected = typeof expected === 'number' ? expected : (expected as PowerScalar).toNumber()
-
-              assert(
-                Math.abs(_actual - _expected) < maxError,
-                `mismatch error=${_actual - _expected} for input=${input} actual=${actual} expected=${expected}`
-              )
+              test(input as string, actual, expected as ExpressionValue, maxError)
             }
+          }
+        })
+
+        it('evals semiscalar irrational mult,div,exp,abs', () => {
+          let actual: ExpressionValue
+
+          for (let [input, expected] of [
+            // multiply
+            ['55.3i * 0.1', 5.5 + 1/30],
+            ['0q313.1i * 0.1', parsePowerScalar(5.5 + 1/30, RadixType.D)],
+            ['5.3i * 0q22 * 0.1', parsePowerScalar(5.3 + 1/30, RadixType.D)],
+            ['cc[5.9i, 3.9i] * 1.5', new Ccoord(9, 6)],
+            ['0d3i * cc[6*1.5, 4*1.5]', new Ccoord(9 * (10/3), 6 * (10/3))],
+            ['tc[0.2i] * 0d3', new Tcoord('22')],
+            ['-3.0 * tc[0q0.2i]', new Tcoord('202')],
+
+            // divide
+            ['0b110110.1i / 0q23 / 10', parsePowerScalar('0.1', RadixType.B)],
+            ['cc[9/1.5, 6/1.5] / 1.9i', new Ccoord(3, 2)],
+            ['tc[303] / 3', new Tcoord('3')],
+            // requires tc-->cc with irrational
+            ['tc[0q22] / 0d3', new Tcoord('0.2', undefined, undefined, undefined, true)],
+            ['tc[0q202] / -3.0', new Tcoord('0.2', undefined, undefined, undefined, true)],
+
+            // exponent
+            ['1.9i ** 4', 16],
+            ['cc[-1,1.9i] ** 3', new Ccoord(-1 * 5, 2 * 5)],
+            ['tc[0q0.2i] ** 0d3', new Tcoord('0.2', undefined, undefined, undefined, true)],
+
+            // abs
+            ['|-2i|', 2 + 2/9],
+            ['|-cc[0.5i,1i]|', ((5/9)**2 + (1 + 1/9)**2) ** 0.5],
+            ['|tc[-2]|', 1]
+          ]) {
+            actual = testEvalExpression(input as string)
+            test(input as string, actual, expected as ExpressionValue, 1e-7)
           }
         })
       })
@@ -389,7 +460,8 @@ describe('tetracoord', () => {
             ['tc[12]', 'tc[-12]', false],
             ['tc[1103.1]', 'tc[1103.100000001]', false],
             ['tc[1103.2i]', 'tc[1103.222222i]', true],
-            ['tc[32i]', 'tc[23.333i]', true]
+            ['tc[32i]', 'tc[23.333i]', true],
+            ['tc[0.2i] * 0d3', 'tc[22]', true]
           ]) {
             const _a = testEvalExpression(a as string) as Tcoord
             const _b = testEvalExpression(b as string) as Tcoord
