@@ -1,11 +1,11 @@
 import { describe, it } from "mocha"
 import assert from "node:assert"
 import { ExpressionValue, evalExpression, preparseExpression } from "../src/tetracoord/calculator/expression"
-import Ccoord, { TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_3, TRIG_SIN_PI_OVER_6 } from "../src/tetracoord/vector/cartesian"
+import Ccoord, { TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6 } from "../src/tetracoord/vector/cartesian"
 import { parsePowerScalar, PowerScalar } from "../src/tetracoord/scalar"
 import { Tetracoordinate as Tcoord } from "../src/tetracoord"
 import { RadixType } from "../src/tetracoord/scalar/radix"
-import { ABS_GROUP_OP, EXP_OP } from "../src/tetracoord/calculator/symbol"
+import { ABS_GROUP_OP } from "../src/tetracoord/calculator/symbol"
 
 /**
  * Calls `evalExpression` with additional error details on failure.
@@ -66,6 +66,16 @@ describe('tetracoord', () => {
           ['0q320.0i', new PowerScalar({digits: new Uint8Array([0b111000]), radix: RadixType.Q, power: 0, irrational: false})],
           ['0q320.01i', new PowerScalar({digits: new Uint8Array([0b11, 0b10000001]), radix: RadixType.Q, power: -2, irrational: true})],
           ['-0q320.1i', new PowerScalar({digits: new Uint8Array([0b11100001]), radix: RadixType.Q, power: -1, sign: -1, irrational: true})],
+
+          // misc
+          [
+            '0q1103.2222222222', 
+            new PowerScalar({
+              digits: new Uint8Array(['11','0322','2222','2222'].map(b => parseInt(b, 4))), 
+              radix: RadixType.Q,
+              power: -10
+            })
+          ]
         ]) {
           actual = testEvalExpression(input as string)
           if (typeof expected === 'number') {
@@ -370,8 +380,30 @@ describe('tetracoord', () => {
 
     describe('boolean logic, comparison', () => {
       describe('comparison equality', () => {
-        it.skip('evals equality of tcoord vectors', () => {
-
+        it('evals equality of tcoord vectors', () => {
+          let actual: boolean
+          
+          for (let [a, b, expected] of [
+            ['tc[-32]', 'tc[12]', true],
+            ['tc[-32]', '-tc[32]', true],
+            ['tc[12]', 'tc[-12]', false],
+            ['tc[1103.1]', 'tc[1103.100000001]', false],
+            ['tc[1103.2i]', 'tc[1103.222222i]', true],
+            ['tc[32i]', 'tc[23.333i]', true]
+          ]) {
+            const _a = testEvalExpression(a as string) as Tcoord
+            const _b = testEvalExpression(b as string) as Tcoord
+    
+            actual = _a.equals(_b)
+            assert.strictEqual(
+              actual, 
+              expected,
+              (
+                `expected ${_a}=${_a.toCartesianCoord()} ${expected ? '==' : '!='} ${_b}=${_b.toCartesianCoord()}`
+                + `; cellRadius=${Tcoord.cellRadius(Math.min(_a.value.power, _b.value.power))}`
+              )
+            )
+          }
         })
       })
     })

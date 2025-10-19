@@ -280,11 +280,15 @@ export class Tetracoordinate {
       vector.add(vectors[this.num_levels-1])
     }
 
+    if (this.value.sign < 0) {
+      vector.multiply(-1)
+    }
+
     return CartesianCoordinate.fromRaw(vector)
   }
 
   /**
-   * If both tcoords are rational, this compares their native scalar values.
+   * If both tcoords are rational and same sign, this compares their native scalar values.
    * Otherwise, uses fallback {@linkcode Tetracoordinate.equalsFromCartesian equalsFromCartesian}.
    * 
    * @param other {Tetracoordinate} Other tcoord for comparison.
@@ -293,11 +297,11 @@ export class Tetracoordinate {
    */
   equals(other: Tetracoordinate): boolean {
     if (other instanceof Tetracoordinate) {
-      if (this.value.irrational !== other.value.irrational) {
-        return this.equalsFromCartesian(other)
+      if (!this.value.irrational && !other.value.irrational && this.value.sign === other.value.sign) {
+        return this.value.equals(other.value)
       }
       else {
-        this.value.equals(other.value)
+        return this.equalsFromCartesian(other)
       }
     }
     else {
