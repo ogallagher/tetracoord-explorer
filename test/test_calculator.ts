@@ -227,6 +227,7 @@ describe('tetracoord', () => {
             ['cc[7,5] - cc[2,-2]', new Ccoord(5, 7)],
             ['cc[0d7, 0q11] - cc[0b10, -0b10]', new Ccoord(5, 7)],
             ['tc[0q1] - tc[0q0.2 + 0q0.2]', new Tcoord('0')],
+            ['tc[0q1.00] - tc[0q0.03]', new Tcoord('1.03')],
 
             // add
             ['cc[4.5, +5] + cc[0.5, -5]', new Ccoord(5, 0)],
@@ -363,6 +364,14 @@ describe('tetracoord', () => {
               )
             }
           }
+        })
+      })
+    })
+
+    describe('boolean logic, comparison', () => {
+      describe('comparison equality', () => {
+        it.skip('evals equality of tcoord vectors', () => {
+
         })
       })
     })

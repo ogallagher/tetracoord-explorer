@@ -284,28 +284,41 @@ export class Tetracoordinate {
   }
 
   /**
-   * // TODO handle irrationals
-   * 
-   * // TODO implement rationals within {@linkcode PowerScalar}
+   * If both tcoords are rational, this compares their native scalar values.
+   * Otherwise, uses fallback {@linkcode Tetracoordinate.equalsFromCartesian equalsFromCartesian}.
    * 
    * @param other {Tetracoordinate} Other tcoord for comparison.
    * 
-   * @returns {boolean} true if the two tcoords are equal.
+   * @returns Whether the two tcoords are equal.
    */
   equals(other: Tetracoordinate): boolean {
     if (other instanceof Tetracoordinate) {
-      let this_quad_str = this.getQuadStrs()
-      let other_quad_str = other.getQuadStrs()
-
-      if (this.value.levelOrder != other.value.levelOrder) {
-        other_quad_str.reverse()
+      if (this.value.irrational !== other.value.irrational) {
+        return this.equalsFromCartesian(other)
       }
-
-      return this_quad_str.join('') == other_quad_str.join('')
+      else {
+        this.value.equals(other.value)
+      }
     }
     else {
       return false
     }
+  }
+
+  /**
+   * At the maximum precision of `this` and `other`, confirm that the vector distance between them
+   * is less than the minimum radius of a tcoord cell.
+   * 
+   * @returns Whether the tcoords are equal.
+   */
+  equalsFromCartesian(other: Tetracoordinate): boolean {
+    let dist: number = (
+      this.toCartesianCoord().toRaw()
+      .subtract(other.toCartesianCoord().toRaw())
+      .magnitude()
+    )
+
+    return dist < Tetracoordinate.cellRadius(Math.min(0, this.value.power, other.value.power))
   }
 
   get magnitudeFromCartesian() {
@@ -651,7 +664,7 @@ export class Tetracoordinate {
    */
   static cellRadius(level: number = 0) {
     // dist from cell centroid to edge is 1/2 at level 0
-    return Math.pow(2, level) / 2
+    return (2 ** level) / 2
   }
 }
 
