@@ -2,6 +2,7 @@ import { describe, it } from "mocha"
 import assert from "node:assert"
 import { parsePowerScalar, PowerScalar } from "../src/tetracoord/scalar"
 import { RadixType } from "../src/tetracoord/scalar/radix"
+import { ByteLevelOrder } from "../src/tetracoord/scalar/byte"
 
 function testParsePowerScalar(d: number|string, r: RadixType, i: boolean) {
   try {
@@ -17,7 +18,7 @@ describe('scalar', () => {
     let ps: PowerScalar
     let actual: number
 
-    const test = (d: number|string, r: RadixType, expected: number, precision: number = 20, i: boolean = false) => {
+    const testNumeric = (d: number|string, r: RadixType, expected: number, precision: number = 20, i: boolean = false) => {
       ps = testParsePowerScalar(d as number|string, r as RadixType, i)
       try {
         actual = ps.toNumber()
@@ -42,7 +43,7 @@ describe('scalar', () => {
         ['11.01', RadixType.B, 3.25],
         ['3.001', RadixType.Q, 3.015625]
       ]) {
-        test(d, r as RadixType, expected as number)
+        testNumeric(d, r as RadixType, expected as number)
       }
     })
 
@@ -60,7 +61,60 @@ describe('scalar', () => {
         ['0111', RadixType.B, parseInt('1000', 2)],
         ['101.1', RadixType.B, parseInt('110', 2)]
       ]) {
-        test(d, r as RadixType, expected as number, 10, true)
+        testNumeric(d, r as RadixType, expected as number, 10, true)
+      }
+    })
+
+    it('checks equality', () => {
+      let actual: boolean
+
+      for (let [a, b, expected] of [
+        [
+          parsePowerScalar(52.1, RadixType.D, true, ByteLevelOrder.HIGH_FIRST), 
+          parsePowerScalar('1.25', RadixType.D, true, ByteLevelOrder.LOW_FIRST),
+          true
+        ],
+        [
+          parsePowerScalar(5.9, RadixType.D, true), 
+          parsePowerScalar('101.1', RadixType.B, true),
+          true
+        ],
+        [
+          parsePowerScalar(5.9, RadixType.D, true, ByteLevelOrder.HIGH_FIRST), 
+          parsePowerScalar('1.101', RadixType.B, true, ByteLevelOrder.LOW_FIRST),
+          true
+        ],
+        [
+          parsePowerScalar(5.5, RadixType.D, false), 
+          parsePowerScalar('101.1', RadixType.B, true),
+          false
+        ],
+        [
+          parsePowerScalar('11.3', RadixType.Q, true), 
+          parsePowerScalar('101.1', RadixType.B, true),
+          true
+        ],
+        [
+          parsePowerScalar('11.32132', RadixType.Q, true, ByteLevelOrder.HIGH_FIRST), 
+          parsePowerScalar('23123.11', RadixType.Q, true, ByteLevelOrder.LOW_FIRST),
+          true
+        ]
+      ]) {
+        const _a = a as PowerScalar
+        const _b = b as PowerScalar
+
+        actual = _a.equals(_b)
+        assert.strictEqual(
+          actual, 
+          expected,
+          (
+            `expected ${_a}[o=${_a.levelOrder}]=`
+            + _a.toString(_a.radix)
+            + `=${_a.toNumber()} ${expected ? '==' : '!='} ${_b}[o=${_b.levelOrder}]=`
+            + _b.toString(_a.radix, undefined, _a.levelOrder)
+            + `=${_b.toNumber()}`
+          )
+        )
       }
     })
   })

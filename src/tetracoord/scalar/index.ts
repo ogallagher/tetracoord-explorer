@@ -85,11 +85,18 @@ export class PowerScalar {
 
     if (typeof this.digits === 'number') {
       // decimal
-      num = this.digits * Math.pow(10, this.power)
+      num = (
+        (
+          this.levelOrder === ByteLevelOrder.HIGH_FIRST 
+          ? this.digits 
+          : Number.parseInt(this.digits.toString(radix).split('').toReversed().join(''), radix)
+        )
+        * 10 ** this.power
+      )
 
       if (this.irrational) {
-        const str = this.digits.toString(10)
-        irrDigit = str[str.length-1]
+        const str = this.digits.toString(radix)
+        irrDigit = str[this.levelOrder === ByteLevelOrder.HIGH_FIRST ? str.length-1 : 0]
       }
     }
     else {
@@ -100,9 +107,14 @@ export class PowerScalar {
       const bitsPerLevel = this.radix === RadixType.Q ? Q_BITS_PER_LEVEL : B_BITS_PER_LEVEL
       const powerPositive = this.power >= 0
 
-      for (let bi=0; bi < this.digits.byteLength; bi++) {
+      for (let bi=0; bi < this.digits.length; bi++) {
         // regardless of order, step from least to greatest significant byte
-        byte = this.digits.at(this.levelOrder === ByteLevelOrder.LOW_FIRST ? bi : this.digits.byteLength-1-bi)
+        byte = this.digits.at(this.levelOrder === ByteLevelOrder.LOW_FIRST ? bi : this.digits.length-1-bi)
+
+        if (this.levelOrder === ByteLevelOrder.LOW_FIRST) {
+          // reverse levels in byte
+          byte = byteReverseLevels(byte, radix)
+        }
         
         byte = byte << BITS_PER_BYTE * bi
         if (powerPositive) {
@@ -121,7 +133,7 @@ export class PowerScalar {
           (
             this.levelOrder === ByteLevelOrder.LOW_FIRST 
             ? this.digits.at(0)
-            : this.digits.at(this.digits.byteLength-1)
+            : this.digits.at(this.digits.length-1)
           ) as number
         ).toString(radix)
         irrDigit = irrByteDigits[this.levelOrder === ByteLevelOrder.LOW_FIRST ? 0 : irrByteDigits.length-1]
@@ -211,13 +223,21 @@ export class PowerScalar {
     }
   }
 
+  equals(other: PowerScalar) {
+    return this.toNumber() == other.toNumber()
+  }
+
   /**
    * Format as scalar literal.
    * 
    * @param radix 
+   * @param showRadixPrefix
+   * @param levelOrder Format as the requested level order. 
+   * Default is to use {@linkcode PowerScalar.levelOrder existing order}.
    */
-  toString(radix?: RadixType|number, showRadixPrefix: boolean = true) {
+  toString(radix?: RadixType|number, showRadixPrefix: boolean = true, levelOrder?: ByteLevelOrder) {
     radix = (typeof radix === 'number') ? radixValueToType(radix) : radix
+    levelOrder = levelOrder || this.levelOrder
     const digitStr = this.toDigitString(radix)
 
     // format irrational
@@ -226,7 +246,7 @@ export class PowerScalar {
     return [
       this.sign < 0 ? NEG_OP : '',
       showRadixPrefix ? `${RADIX_PREFIX}${radix || this.radix}` : '',
-      digitStr,
+      levelOrder === this.levelOrder ? digitStr : digitStr.split('').toReversed().join(''),
       irrationalSuffix
     ].join('')
   }
@@ -326,6 +346,10 @@ export const getRawScalarType = (n: RawScalar|PowerScalar) => (
   : RawScalarType.Bytes
 )
 
+export const byteReverseLevels = (b: number, r: number) => (
+  Number.parseInt(b.toString(r).split('').toReversed().join(''), r)
+)
+
 /**
  * @param digits Int array where each element is a single digit.
  * @param radix Radix of each digit (level) in `digits` to indicate values per level and levels per byte.
@@ -358,45 +382,30 @@ export function digitsToBytes(digits: number[], radix: RadixType.B|RadixType.Q, 
   const bytes = new Uint8Array(Math.ceil(numLevels / levelsPerByte))
   bytes.fill(0)
 
-  const levelIdxOrdered = (di: number) => (
-    levelOrder === ByteLevelOrder.HIGH_FIRST
-    ? levelsPerByte - 1 - di
-    : di
-  )
-  const byteIdxOrdered = (bi: number) => (
-    levelOrder === ByteLevelOrder.HIGH_FIRST
-    ? bi
-    : bytes.byteLength - 1 - bi
-  )
-
   let byte: number = 0
   let byteIdx: number = 0
-  let digitIndex: number = 0
+  let digitIdx: number = 0
+  let levelIdx: number
   for (let i = 0; i < digits.length; i++) {
-    const li = levelIdxOrdered(digitIndex)
-    const bi = byteIdxOrdered(byteIdx)
+    levelIdx = levelsPerByte - 1 - digitIdx
     const d: number = digits[i]
 
     if (d < valuesPerLevel) {
       // bit shift to current level in byte
-      const l = d << li * bitsPerLevel
+      const l = d << levelIdx * bitsPerLevel
 
       // bitwise OR to set level within byte
       byte |= l
 
-      // console.log(
-      //   `debug Bi=${bi} Li=${li} Bb=${byte.toString(2)} Bq=${byte.toString(4)}`
-      // )
-
       // update offsets
-      digitIndex++
-      if (digitIndex >= levelsPerByte) {
+      digitIdx++
+      if (digitIdx >= levelsPerByte) {
         // write byte to bytes
-        bytes.set([byte], bi)
+        bytes.set([byte], byteIdx)
 
         // next byte
         byteIdx++
-        digitIndex = 0
+        digitIdx = 0
         byte = 0
       }
     }
@@ -408,9 +417,9 @@ export function digitsToBytes(digits: number[], radix: RadixType.B|RadixType.Q, 
       throw new Error(`invalid radix=${radix} digit at idx [${i}] = ${d}`)
     }
   }
-  if (byteIdx < bytes.byteLength) {
+  if (byteIdx < bytes.length) {
     // write last byte to bytes
-    bytes.set([byte], byteIdxOrdered(byteIdx))
+    bytes.set([byte], byteIdx)
   }
 
   return bytes
