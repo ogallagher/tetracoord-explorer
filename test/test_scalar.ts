@@ -43,7 +43,8 @@ describe('scalar', () => {
         ['11.01', RadixType.B, 3.25],
         ['3.001', RadixType.Q, 3.015625],
         ['1103.2222222222', RadixType.Q, 83.66666603088379],
-        ['2222222222.3011', RadixType.Q, 83.66666603088379, ByteLevelOrder.LOW_FIRST]
+        ['2222222222.3011', RadixType.Q, 83.66666603088379, ByteLevelOrder.LOW_FIRST],
+        ['11.2020202020202020', RadixType.Q, 5.5 + 1/30] // requires bytes-->bigint-->number implementation
       ]) {
         testNumeric(d, r as RadixType, expected as number, undefined, undefined, order as ByteLevelOrder)
       }

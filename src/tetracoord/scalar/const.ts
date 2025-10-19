@@ -5,4 +5,3 @@ export enum RawScalarType {
 }
 
 export type Sign = 1|-1
-

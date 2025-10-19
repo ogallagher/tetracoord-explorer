@@ -92,11 +92,12 @@ export class PowerScalar {
         (
           this.levelOrder === ByteLevelOrder.HIGH_FIRST 
           ? this.digits 
-          : Number.parseInt(this.digits.toString(radix).split('').toReversed().join(''), radix)
+          : Number.parseInt([...this.digits.toString(radix)].toReversed().join(''), radix)
         )
         * 10 ** this.power
       )
 
+      // irrational digit
       if (this.irrational) {
         const str = this.digits.toString(radix)
         irrDigit = str[this.levelOrder === ByteLevelOrder.HIGH_FIRST ? str.length-1 : 0]
@@ -104,33 +105,41 @@ export class PowerScalar {
     }
     else {
       // bytes
-      num = 0
-
-      let byte: number
+      let bigint: bigint = 0n
+      let smallByte: number
+      let byte: bigint
       const bitsPerLevel = this.radix === RadixType.Q ? Q_BITS_PER_LEVEL : B_BITS_PER_LEVEL
       const powerPositive = this.power >= 0
 
+      // digits and +power
       for (let bi=0; bi < this.digits.length; bi++) {
-        // regardless of order, step from least to greatest significant byte
-        byte = this.digits.at(this.levelOrder === ByteLevelOrder.LOW_FIRST ? bi : this.digits.length-1-bi)
+        // regardless of order, step from greatest to least significant byte
+        smallByte = this.digits.at(this.levelOrder === ByteLevelOrder.HIGH_FIRST ? bi : this.digits.length-1-bi)
 
         if (this.levelOrder === ByteLevelOrder.LOW_FIRST) {
           // reverse levels in byte
-          byte = byteReverseLevels(byte, radix)
+          smallByte = byteReverseLevels(smallByte, radix)
         }
         
-        byte = byte << BITS_PER_BYTE * bi
-        if (powerPositive) {
-          byte = byte << this.power * bitsPerLevel
-        }
+        // left shift byte to place value (+power if positive)
+        byte = BigInt(smallByte)
+        byte = byte << BigInt(
+          BITS_PER_BYTE * (this.digits.length-1-bi)
+          + (powerPositive ? this.power * bitsPerLevel : 0)
+        )
 
-        num |= byte
+        bigint |= byte
       }
 
+      // bigint to number
+      num = Number(bigint)
+
+      // -power
       if (!powerPositive) {
         num *= radix ** this.power
       }
 
+      // irrational digit
       if (this.irrational) {
         const irrByteDigits: string = (
           (
@@ -267,7 +276,7 @@ export class PowerScalar {
     return [
       this.sign < 0 ? NEG_OP : '',
       showRadixPrefix ? `${RADIX_PREFIX}${radix || this.radix}` : '',
-      levelOrder === this.levelOrder ? digitStr : digitStr.split('').toReversed().join(''),
+      levelOrder === this.levelOrder ? digitStr : [...digitStr].toReversed().join(''),
       irrationalSuffix
     ].join('')
   }
@@ -368,7 +377,7 @@ export const getRawScalarType = (n: RawScalar|PowerScalar) => (
 )
 
 export const byteReverseLevels = (b: number, r: number) => (
-  Number.parseInt(b.toString(r).split('').toReversed().join(''), r)
+  Number.parseInt([...b.toString(r)].toReversed().join(''), r)
 )
 
 /**
