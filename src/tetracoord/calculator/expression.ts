@@ -4,9 +4,9 @@ import { parsePowerScalar, PowerScalar } from "../scalar"
 import { RadixType } from "../scalar/radix"
 import { VectorType } from "../vector/const"
 import Tetracoordinate from "../vector/tetracoordinate"
-import { ABS_GROUP_OP, DIV_OP, EXP_OP, GROUP_OP, IRR_SUFFIX_DOTS, IRR_SUFFIX_I, IRR_SUFFIX_OP, ITEM_DELIM_OP, MUL_OP, NEG_OP, POS_OP, RADIX_PREFIX, RADIX_PREFIX_OP, VEC_ACCESS_OP } from "./symbol"
+import { ABS_GROUP_OP, DIV_OP, EQ_LOOSE_OP, EQ_STRICT_OP, EXP_OP, GROUP_OP, IRR_SUFFIX_DOTS, IRR_SUFFIX_I, IRR_SUFFIX_OP, ITEM_DELIM_OP, MUL_OP, NEG_OP, NEQ_STRICT_OP, POS_OP, RADIX_PREFIX, RADIX_PREFIX_OP, VEC_ACCESS_OP } from "./symbol"
 
-type ExpressionValueSingleton = number|PowerScalar|Tetracoordinate|CartesianCoordinate
+type ExpressionValueSingleton = number|PowerScalar|Tetracoordinate|CartesianCoordinate|boolean
 /**
  * Used for values like {@linkcode CartesianCoordinate ccoords} that consume a list of components.
  */
@@ -63,7 +63,7 @@ export function preparseExpression(str: string): string {
       strParts.push(`${radix}${RADIX_PREFIX_OP}`)
     }
     else {
-      throw new Error(`cannot preparse invalid match=${matchStr} for pattern=${pattern}`)
+      throw new SyntaxError(`cannot preparse invalid match=${matchStr} for pattern=${pattern}`)
     }
 
     cursor = pattern.lastIndex
@@ -82,7 +82,7 @@ function parseSemiscalarOperands(a: ExpressionValueSingleton, b: ExpressionValue
     semiscalar = true
     if (!commutative) {
       // operator is not commutative
-      throw new Error (`operands must be vector left=${a}, scalar right=${b}`)
+      throw new TypeError(`operands must be vector left=${a}, scalar right=${b}`)
     }
     // swap operands for vector as left
     const _a = a; a = b; b = _a
@@ -104,7 +104,7 @@ function parseScalarNode(node: ExpressionTree, radixType: RadixType): PowerScala
     return parsePowerScalar(a[1] as number, radixType, true)
   }
   else {
-    throw new Error(`invalid raw number node=${node}`)
+    throw new SyntaxError(`invalid scalar number node=${node}`)
   }
 }
 
@@ -170,7 +170,7 @@ function evalAddSub(op: '-'|'+', a: ExpressionValueSingleton, b: ExpressionValue
     }
     else {
       // mixed vector
-      throw new Error(`vector binary add/subtract not supported for mixed types; convert first. a=${a} b=${b}`)
+      throw new TypeError(`vector binary add/subtract not supported for mixed types; convert first. a=${a} b=${b}`)
     }
   }
 }
@@ -209,7 +209,7 @@ function evalMulDiv(op: '*'|'/', a: ExpressionValueSingleton, b: ExpressionValue
     }
     else {
       // unknown, probably vector
-      throw new Error(`binary multiply/divide not supported for given types a=${a} b=${b}`)
+      throw new TypeError(`binary multiply/divide not supported for given types a=${a} b=${b}`)
     }
   }
 }
@@ -232,6 +232,35 @@ function evalPow(a: ExpressionValueSingleton, b: ExpressionValueSingleton): Expr
     }
     else if (_a instanceof PowerScalar || _b instanceof PowerScalar) {
       return PowerScalar.pow(_a as number|PowerScalar, _b as number|PowerScalar)
+    }
+  }
+}
+
+function evalEq(op: '==='|'==', a: ExpressionValueSingleton, b: ExpressionValueSingleton): boolean {
+  if (op === EQ_LOOSE_OP) {
+    throw new SyntaxError(`loose equality ${op} for implicit type conversion is not supported`)
+  }
+
+  if (typeof a === 'number' && typeof b === 'number') {
+    // simple scalar
+    return a === b
+  }
+  else {
+    if (a instanceof PowerScalar && b instanceof PowerScalar) {
+      // power scalar
+      return a.equals(b)
+    }
+    else if (a instanceof Tetracoordinate && b instanceof Tetracoordinate) {
+      // tcoord vector
+      return a.equals(b)
+    }
+    else if (a instanceof CartesianCoordinate && b instanceof CartesianCoordinate) {
+      // ccoord vector
+      return a.equals(b)
+    }
+    else {
+      // mixed types
+      throw new TypeError(`strict equality ${op} not supported for mixed types; convert first. a=${a} b=${b}`)
     }
   }
 }
@@ -321,6 +350,14 @@ function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixTy
       return new Tetracoordinate(_b as number|PowerScalar)
     }
   }
+  else if (op === EQ_STRICT_OP || op === NEQ_STRICT_OP && b !== undefined) {
+    const eq = evalEq(
+      EQ_STRICT_OP, 
+      parseExpressionTree(a as ExpressionTree, radixCtx) as ExpressionValueSingleton,
+      parseExpressionTree(b as ExpressionTree, radixCtx) as ExpressionValueSingleton
+    )
+    return (op === EQ_STRICT_OP) ? eq : !eq
+  }
   else if (op === GROUP_OP && b === undefined) {
     return parseExpressionTree(a as ExpressionTree, radixCtx)
   }
@@ -332,26 +369,30 @@ function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixTy
 
     if (b === undefined) {
       // unary operation
-      throw new Error(`unsupported unary operation ${[op, _a]}`)
+      throw new SyntaxError(`unsupported unary operation ${[op, _a]}`)
     }
     else {
       // binary operation
       const _b = isLeaf(b) ? b : parseExpressionTree(b as ExpressionTree, radixCtx)
 
-      throw new Error(`unsupported binary operation ${[op, _a, _b]}`)
+      throw new SyntaxError(`unsupported binary operation ${[op, _a, _b]}`)
     }
   }
   else if (typeof a === 'number') {
-    // literal
+    // number literal
     if (radixCtx === RadixType.D) {
-      return a as ExpressionValue
+      return a
     }
     else {
       return parsePowerScalar(a, radixCtx)
     }
   }
+  else if (typeof a === 'boolean') {
+    // boolean literal
+    return a
+  }
   else {
-    throw new Error(`invalid literal type ${typeof a} of a=${a}`)
+    throw new TypeError(`invalid literal type ${typeof a} of a=${a}`)
   }
 }
 

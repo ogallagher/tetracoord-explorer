@@ -477,6 +477,55 @@ describe('tetracoord', () => {
             )
           }
         })
+
+        it('evals strict scalar and vector equality', () => {
+          let actual: boolean
+
+          for (let [idx, [input, expected]] of [
+            // tcoord
+            ['tc[-32] === tc[12]', true],
+            ['tc[-32] !== tc[12]', false],
+            ['tc[-32] === -tc[32]', true],
+            ['tc[-32] === -cc[tc[32]]', Error('mixed vector types')],
+            ['tc[1103.1] !== tc[1103.100000001]', true],
+            ['tc[0q1] + -tc[0q3] === tc[32]', true],
+            ['tc[0q22] / 0d3 === tc[0.2i]', true],
+            ['tc[22] === -tc[202]', true],
+
+            // ccoord
+            ['cc[7,5] - cc[2,-2] === cc[5, 7]', true],
+            ['cc[0d7, 0q11] - cc[0b10, -0b10] !== cc[5, 7]', false],
+            ['-cc[1/9, 2/9] === cc[-0d0.1i, -0d0.2i]', true],
+
+            // vector cast
+            ['cc[tc[0q3]] === cc[cospi6, -sinpi6]', true],
+            ['cc[-tc[0q101]] === cc[0, -3]', true], // -0q101 === 0q011
+            ['cc[-tc[0q101.1i]] === cc[0, -2]', true],
+
+            ['tc[cc[3*cospi6, 3*-sinpi6]] / 3 === tc[3]', true],
+            ['tc[cc[3*cospi6, 3*sinpi6]] === -tc[202]', true],
+            ['tc[0q202] / -3.0 === tc[cc[cospi6, sinpi6]]', true],
+
+            // scalar
+            ['-32 === -0d32', Error('mixed scalar types')],
+            ['0q32 === 0b1110', true],
+            ['0q32 !== 0b1110', false],
+            ['(0d0 + 0q32i) === 0d14.6i', true],
+            ['0q32i === (0q0 + 0d14.6i)', true]
+          ].entries()) {
+            if (expected instanceof Error) {
+              assert.throws(() => testEvalExpression(input as string))
+            }
+            else {
+              actual = testEvalExpression(input as string) as boolean
+              assert.strictEqual(
+                actual, 
+                expected as boolean, 
+                `mismatch at case[${idx}] input=${input}`
+              )
+            }
+          }
+        })
       })
     })
 

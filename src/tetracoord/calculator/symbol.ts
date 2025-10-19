@@ -33,7 +33,6 @@ export const VEC_ACCESS_OP = '[]'
  * Delimiter for items in a collection (ex. components in a cartesian coordinate).
  */
 export const ITEM_DELIM_OP = ','
-export const STMT_DELIM_OP = ';'
 /**
  * Negative/subtract operator.
  */
@@ -62,6 +61,16 @@ export const ABS_GROUP_OP = '||'
  * Parenthesis group operator.
  */
 export const GROUP_OP = '()'
+/**
+ * Strict (same type) equal operator.
+ */
+export const EQ_STRICT_OP = '==='
+/**
+ * Strict (same type) not equal operator.
+ */
+export const NEQ_STRICT_OP = '!=='
+export const EQ_LOOSE_OP = '=='
+export const NEQ_LOOSE_OP = '!='
 
 export const COSPI6_CONST = 'cospi6'
 export const SINPI6_CONST = 'sinpi6'

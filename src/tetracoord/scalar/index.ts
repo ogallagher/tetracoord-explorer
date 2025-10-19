@@ -253,8 +253,16 @@ export class PowerScalar {
     }
   }
 
-  equals(other: PowerScalar) {
-    return this.toNumber() == other.toNumber()
+  /**
+   * @param precision Rounds difference to this many digits after decimal point.
+   * @returns Whether equal to `other` scalar.
+   */
+  equals(other: PowerScalar, precision: number = 8) {
+    return 0 === (
+      Math.round(
+        (this.toNumber() - other.toNumber()) * 10**precision
+      ) / 10**precision
+    )
   }
 
   /**

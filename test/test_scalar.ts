@@ -55,10 +55,12 @@ describe('scalar', () => {
         // decimal
         ['5.1', RadixType.D, 5 + 1/9],
         ['5.31', RadixType.D, 5.3 + 1/90],
+        ['14.6', RadixType.D, 14 + 2/3],
 
         // quaternary
         ['31', RadixType.Q, 13 + 1/3],
         ['11.31', RadixType.Q, 5.75 + 1/30],
+        ['32', RadixType.Q, 14 + 2/3],
 
         // binary
         ['0111', RadixType.B, parseInt('1000', 2)],

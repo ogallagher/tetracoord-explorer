@@ -74,6 +74,13 @@ export class CartesianCoordinate {
     return this
   }
 
+  /**
+   * Calls underlying {@linkcode Pt.equals} with default error/distance threshold of `1e-6`.
+   */
+  equals(other: CartesianCoordinate) {
+    return this.v.equals(other.v)
+  }
+
   toString(radix: RadixType = RadixType.D) {
     let out: string[] = [
       VectorType.CCoord,
