@@ -4,13 +4,11 @@
   "description": "Tetracoordinates engine, grapher, calculator, playground.",
   "main": "index.js",
   "scripts": {
-    "_test": "NODE_OPTIONS=\"--import=tsx\" mocha",
-    "test": "npm run _test -- test/**/*.ts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "cli": "tsx src/cli_driver.ts"
+    "cli": "tcoord"
   },
   "repository": {
     "type": "git",
@@ -36,13 +34,11 @@
   },
   "homepage": "https://github.com/ogallagher/tetracoord-explorer#readme",
   "devDependencies": {
-    "@types/mocha": "^10.0.10",
     "@types/node": "^18.19.130",
     "@types/pino": "^7.0.4",
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",
     "@types/yargs": "^17.0.33",
-    "mocha": "^11.7.4",
     "typescript": "^5.9.3"
   },
   "dependencies": {
@@ -50,15 +46,8 @@
     "bootstrap": "^5.2.0",
     "next": "^12.2.3",
     "paper": "^0.12.15",
-    "pino": "^10.0.0",
-    "pts-math": "^0.12.9",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "subscript": "^9.1.0"
-  },
-  "optionalDependencies": {
-    "pino-pretty": "^13.1.2",
-    "tsx": "^4.20.6",
-    "yargs": "^18.0.0"
+    "tetracoord": "^0.6.1"
   }
 }
