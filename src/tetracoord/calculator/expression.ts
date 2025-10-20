@@ -7,19 +7,22 @@ import Tetracoordinate from "../vector/tetracoordinate"
 import { ABS_GROUP_OP, DIV_OP, EQ_LOOSE_OP, EQ_STRICT_OP, EXP_OP, GROUP_OP, IRR_SUFFIX_DOTS, IRR_SUFFIX_I, IRR_SUFFIX_OP, ITEM_DELIM_OP, MUL_OP, NEG_OP, NEQ_STRICT_OP, POS_OP, RADIX_PREFIX, RADIX_PREFIX_OP, VEC_ACCESS_OP } from "./symbol"
 import pino from 'pino'
 
-type ExpressionValueSingleton = number|PowerScalar|Tetracoordinate|CartesianCoordinate|boolean
+export type ExpressionValue = number|PowerScalar|Tetracoordinate|CartesianCoordinate|boolean
 /**
  * Used for values like {@linkcode CartesianCoordinate ccoords} that consume a list of components.
  */
 class ExpressionValueCollection {
-  constructor(public items: ExpressionValueSingleton[]) {}
+  constructor(public items: ExpressionValue[]) {}
 }
-export type ExpressionValue = ExpressionValueSingleton|ExpressionValueCollection
+export type ExpressionInnerValue = ExpressionValue|ExpressionValueCollection
 
-export type ExpressionLeaf = ExpressionValue|string|null|undefined
+export type ExpressionLeaf = ExpressionInnerValue|string|null|undefined
 export type ExpressionTree = (ExpressionLeaf|ExpressionTree)[]
 
-export const logger = pino({name: 'calculator.expression'})
+export const logger = pino({
+  name: 'calculator.expression',
+  level: 'warn'
+})
 
 /**
  * Translate true tetracoord calculator expression to intermediate syntax for parser compatibility.
@@ -76,7 +79,7 @@ export function preparseExpression(str: string): string {
   return strParts.join('')
 }
 
-function parseSemiscalarOperands(a: ExpressionValueSingleton, b: ExpressionValueSingleton, commutative: boolean = true) {
+function parseSemiscalarOperands(a: ExpressionValue, b: ExpressionValue, commutative: boolean = true) {
   let semiscalar: boolean
   if (a instanceof Tetracoordinate || a instanceof CartesianCoordinate) {
     semiscalar = true
@@ -111,7 +114,7 @@ function parseScalarNode(node: ExpressionTree, radixType: RadixType): PowerScala
   }
 }
 
-function evalNegate(a: ExpressionValueSingleton): ExpressionValueSingleton {
+function evalNegate(a: ExpressionValue): ExpressionValue {
   if (typeof a === 'number') {
     return -a
   }
@@ -126,7 +129,7 @@ function evalNegate(a: ExpressionValueSingleton): ExpressionValueSingleton {
   }
 }
 
-function evalAbs(a: ExpressionValueSingleton): ExpressionValueSingleton {
+function evalAbs(a: ExpressionValue): ExpressionValue {
   if (typeof a === 'number') {
     return Math.abs(a)
   }
@@ -141,7 +144,7 @@ function evalAbs(a: ExpressionValueSingleton): ExpressionValueSingleton {
   }
 }
 
-function evalAddSub(op: '-'|'+', a: ExpressionValueSingleton, b: ExpressionValueSingleton): ExpressionValueSingleton {
+function evalAddSub(op: '-'|'+', a: ExpressionValue, b: ExpressionValue): ExpressionValue {
   if (typeof a === 'number' && typeof b === 'number') {
     // simple scalar
     return op === NEG_OP ? a - b : a + b
@@ -178,7 +181,7 @@ function evalAddSub(op: '-'|'+', a: ExpressionValueSingleton, b: ExpressionValue
   }
 }
 
-function evalMulDiv(op: '*'|'/', a: ExpressionValueSingleton, b: ExpressionValueSingleton): ExpressionValueSingleton {
+function evalMulDiv(op: '*'|'/', a: ExpressionValue, b: ExpressionValue): ExpressionValue {
   if (typeof a === 'number' && typeof b === 'number') {
     // simple scalar
     return op === MUL_OP ? a * b : a / b
@@ -217,7 +220,7 @@ function evalMulDiv(op: '*'|'/', a: ExpressionValueSingleton, b: ExpressionValue
   }
 }
 
-function evalPow(a: ExpressionValueSingleton, b: ExpressionValueSingleton): ExpressionValueSingleton {
+function evalPow(a: ExpressionValue, b: ExpressionValue): ExpressionValue {
   if (typeof a === 'number' && typeof b === 'number') {
     // simple scalar
     return a ** b
@@ -239,7 +242,7 @@ function evalPow(a: ExpressionValueSingleton, b: ExpressionValueSingleton): Expr
   }
 }
 
-function evalEq(op: '==='|'==', a: ExpressionValueSingleton, b: ExpressionValueSingleton): boolean {
+function evalEq(op: '==='|'==', a: ExpressionValue, b: ExpressionValue): boolean {
   if (op === EQ_LOOSE_OP) {
     throw new SyntaxError(`loose equality ${op} for implicit type conversion is not supported`)
   }
@@ -271,7 +274,7 @@ function evalEq(op: '==='|'==', a: ExpressionValueSingleton, b: ExpressionValueS
 /**
  * Both parses and evaluates the expression abstract syntax tree from the given root node.
  */
-function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixType.D): ExpressionValue {
+function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixType.D): ExpressionInnerValue {
   const op = node[0]
   const a = node[1]
   const b = node[2]
@@ -292,7 +295,7 @@ function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixTy
       // unary
       if (op === NEG_OP) {
         // negate 
-        return evalNegate(_a as ExpressionValueSingleton)
+        return evalNegate(_a as ExpressionValue)
       }
       else {
         // positive (identity)
@@ -302,28 +305,28 @@ function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixTy
     else {
       // binary
       const _b = parseExpressionTree(b as ExpressionTree, radixCtx)
-      return evalAddSub(op, _a as ExpressionValueSingleton, _b as ExpressionValueSingleton)
+      return evalAddSub(op, _a as ExpressionValue, _b as ExpressionValue)
     }
   }
   else if (op === ABS_GROUP_OP && b === undefined) {
-    return evalAbs(parseExpressionTree(a as ExpressionTree, radixCtx) as ExpressionValueSingleton)
+    return evalAbs(parseExpressionTree(a as ExpressionTree, radixCtx) as ExpressionValue)
   }
   else if (op === MUL_OP || op === DIV_OP) {
     return evalMulDiv(
       op,
-      parseExpressionTree(a as ExpressionTree, radixCtx) as ExpressionValueSingleton,
-      parseExpressionTree(b as ExpressionTree, radixCtx) as ExpressionValueSingleton
+      parseExpressionTree(a as ExpressionTree, radixCtx) as ExpressionValue,
+      parseExpressionTree(b as ExpressionTree, radixCtx) as ExpressionValue
     )
   }
   else if (op === EXP_OP) {
     return evalPow(
-      parseExpressionTree(a as ExpressionTree, radixCtx) as ExpressionValueSingleton,
-      parseExpressionTree(b as ExpressionTree, radixCtx) as ExpressionValueSingleton
+      parseExpressionTree(a as ExpressionTree, radixCtx) as ExpressionValue,
+      parseExpressionTree(b as ExpressionTree, radixCtx) as ExpressionValue
     )
   }
   else if (op === ITEM_DELIM_OP) {
     // return collection of values
-    return new ExpressionValueCollection(node.slice(1).map(i => parseExpressionTree(i as ExpressionTree, radixCtx) as ExpressionValueSingleton))
+    return new ExpressionValueCollection(node.slice(1).map(i => parseExpressionTree(i as ExpressionTree, radixCtx) as ExpressionValue))
   }
   else if (op === VEC_ACCESS_OP && (a === VectorType.CCoord || a === VectorType.TCoord)) {
     const _b = parseExpressionTree(b as ExpressionTree, a === VectorType.CCoord ? RadixType.D : RadixType.Q)
@@ -356,8 +359,8 @@ function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixTy
   else if (op === EQ_STRICT_OP || op === NEQ_STRICT_OP && b !== undefined) {
     const eq = evalEq(
       EQ_STRICT_OP, 
-      parseExpressionTree(a as ExpressionTree, radixCtx) as ExpressionValueSingleton,
-      parseExpressionTree(b as ExpressionTree, radixCtx) as ExpressionValueSingleton
+      parseExpressionTree(a as ExpressionTree, radixCtx) as ExpressionValue,
+      parseExpressionTree(b as ExpressionTree, radixCtx) as ExpressionValue
     )
     return (op === EQ_STRICT_OP) ? eq : !eq
   }
@@ -399,28 +402,13 @@ function parseExpressionTree(node: ExpressionTree, radixCtx: RadixType = RadixTy
   }
 }
 
-export function evalExpression(expr: string, formatRadix?: RadixType, formatVector?: VectorType) {
+export function evalExpression(expr: string): ExpressionValue {
   logger.info(`parse raw expression=${expr}`)
 
   expr = preparseExpression(expr)
   logger.debug(`preparsed expression=${expr}`)
   
-  const res = parseExpressionTree(parse(expr)) as ExpressionValueSingleton
-  logger.debug(`raw result=${res}`)
-
-  if (res instanceof Tetracoordinate && formatVector === VectorType.CCoord) {
-    return res.toCartesianCoord()
-  }
-  else if (res instanceof CartesianCoordinate && formatVector === VectorType.TCoord) {
-    return Tetracoordinate.fromCartesianCoord(res)
-  }
-  else if (res instanceof PowerScalar && formatRadix !== undefined) {
-    return res.toString(formatRadix)
-  }
-  else if (typeof res === 'number' && formatRadix !== undefined) {
-    return parsePowerScalar(res, RadixType.D).toString(formatRadix, false)
-  }
-  else {
-    return res
-  }
+  const res = parseExpressionTree(parse(expr)) as ExpressionValue
+  logger.debug(`result=${res}`)
+  return res
 }

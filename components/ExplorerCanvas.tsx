@@ -7,7 +7,7 @@ import paperjs from "paper"
 import { 
     Orientation,
     Tetracoordinate,
-    Vector2D,
+    CartesianCoordinate,
     TetracoordSpace,
     TetracoordCell
 } from "../src/tetracoord"
@@ -39,7 +39,7 @@ function ExplorerCanvas(props: ExplorerCanvasProps) {
         let unit_cell_dn_path = new paperjs.Path(
             tspace.tcoord_to_cell(Tetracoordinate.ZERO)
             .get_points_scaled_oriented()
-            .map((point: Vector2D) => {
+            .map((point: CartesianCoordinate) => {
                 return new paperjs.Point(point)
             })
         )
@@ -49,7 +49,7 @@ function ExplorerCanvas(props: ExplorerCanvasProps) {
         let unit_cell_up_path = new paperjs.Path(
             tspace.tcoord_to_cell(Tetracoordinate.ONE)
             .get_points_scaled_oriented()
-            .map((point: Vector2D) => {
+            .map((point: CartesianCoordinate) => {
                 return new paperjs.Point(point)
             })
         )

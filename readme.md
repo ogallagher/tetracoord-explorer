@@ -10,14 +10,17 @@ Tetracoordinates engine, grapher, calculator, playground.
 
 ## CLI driver
 
-Run cli driver with `npm run cli -- -e <expression>` to evaluate an arithmetic or logical expression with scalar and vector terms. See `npm run cli -- --help` for all options.
+Run cli driver with `npm run cli -- -e "<expression>"` to evaluate an arithmetic or logical expression with scalar and vector terms. 
+See `npm run cli -- --help` for all options.
+
+The program loops, prompting for a new set of opts after each expression is evaluated. So running with no input simply as `npm run cli` is convenient, and avoids some erroneous opt parsing when provided through `npm run`.
 
 Examples:
 
 ```shell
 # Evaluate scalar sum of three terms (5 + 5 + 5), each defined with a different radix,
 # with info logs piped through optional dependency pino-pretty.
-npm run cli -- -e "5 + 0q11 + 0b101" -l info | npx pino-pretty
+npm run cli -- -e "5 + 0q11 + 0b101" -l info
 # result = 0d15
 
 # Show same scalar result as quaternary

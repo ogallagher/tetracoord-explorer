@@ -1,6 +1,6 @@
 import { describe, it } from "mocha"
 import assert from "node:assert"
-import { ExpressionValue, evalExpression, preparseExpression } from "../src/tetracoord/calculator/expression"
+import { ExpressionInnerValue, evalExpression, preparseExpression } from "../src/tetracoord/calculator/expression"
 import Ccoord, { TRIG_COS_PI_OVER_6, TRIG_SIN_PI_OVER_6 } from "../src/tetracoord/vector/cartesian"
 import { parsePowerScalar, PowerScalar } from "../src/tetracoord/scalar"
 import { Tetracoordinate as Tcoord } from "../src/tetracoord"
@@ -45,7 +45,7 @@ describe('tetracoord', () => {
       })
   
       it('evals scalar literals', () => {
-        let actual: ExpressionValue
+        let actual: ExpressionInnerValue
   
         for (let [input, expected] of [
           // radix prefix
@@ -128,7 +128,7 @@ describe('tetracoord', () => {
       })
 
       it('evals rational,irrational vector conversion', () => {
-        let actual: ExpressionValue
+        let actual: ExpressionInnerValue
         const tcoordCellRadius = Tcoord.cellRadius(0)
 
         for (let [input, expected] of [
@@ -167,7 +167,7 @@ describe('tetracoord', () => {
 
     describe('arithmetic', () => {
       describe('scalar', () => {
-        let actual: ExpressionValue
+        let actual: ExpressionInnerValue
 
         const test = (input: string, expected: number|PowerScalar, maxError = 0) => {
           actual = testEvalExpression(input)
@@ -230,7 +230,7 @@ describe('tetracoord', () => {
 
       describe('vector', () => {
         it('evals vector add,subtract', () => {
-          let actual: ExpressionValue
+          let actual: ExpressionInnerValue
 
           for (let [input, expected] of [
             // subtract
@@ -255,7 +255,7 @@ describe('tetracoord', () => {
         })
 
         it('evals irrational vector add,subtract', () => {
-          let actual: ExpressionValue
+          let actual: ExpressionInnerValue
           const maxError = 1e-8
 
           for (let [input, expected] of [
@@ -281,7 +281,7 @@ describe('tetracoord', () => {
       })
 
       describe('semiscalar', () => {
-        function test(input: string, actual: ExpressionValue, expected: ExpressionValue, maxError?: number) {
+        function test(input: string, actual: ExpressionInnerValue, expected: ExpressionInnerValue, maxError?: number) {
           if (typeof expected === 'number' || expected instanceof PowerScalar) {
             // scalar
             if (maxError !== undefined) {
@@ -324,7 +324,7 @@ describe('tetracoord', () => {
         }
 
         it('evals semiscalar multiply,divide', () => {
-          let actual: ExpressionValue
+          let actual: ExpressionInnerValue
 
           for (let [input, expected] of [
             // multiply
@@ -348,12 +348,12 @@ describe('tetracoord', () => {
             ['tc[0q22] / -3.0', new Tcoord('2')],
           ]) {
             actual = testEvalExpression(input as string)
-            test(input as string, actual, expected as ExpressionValue)
+            test(input as string, actual, expected as ExpressionInnerValue)
           }
         })
 
         it('evals semiscalar exponent', () => {
-          let actual: ExpressionValue
+          let actual: ExpressionInnerValue
 
           for (let [input, expected] of [
             // scalar
@@ -375,13 +375,13 @@ describe('tetracoord', () => {
             }
             else {
               actual = testEvalExpression(input as string)
-              test(input as string, actual, expected as ExpressionValue)
+              test(input as string, actual, expected as ExpressionInnerValue)
             }
           }
         })
 
         it('evals semiscalar abs,magnitude', () => {
-          let actual: ExpressionValue
+          let actual: ExpressionInnerValue
           const maxError = 1e-7
 
           for (let [input, expected] of [
@@ -406,13 +406,13 @@ describe('tetracoord', () => {
             }
             else {
               actual = testEvalExpression(input as string)
-              test(input as string, actual, expected as ExpressionValue, maxError)
+              test(input as string, actual, expected as ExpressionInnerValue, maxError)
             }
           }
         })
 
         it('evals semiscalar irrational mult,div,exp,abs', () => {
-          let actual: ExpressionValue
+          let actual: ExpressionInnerValue
 
           for (let [input, expected] of [
             // multiply
@@ -443,7 +443,7 @@ describe('tetracoord', () => {
             ['|tc[-2]|', 1]
           ]) {
             actual = testEvalExpression(input as string)
-            test(input as string, actual, expected as ExpressionValue, 1e-7)
+            test(input as string, actual, expected as ExpressionInnerValue, 1e-7)
           }
         })
       })
@@ -531,7 +531,7 @@ describe('tetracoord', () => {
 
     describe('groups and operation order', () => {
       it('evals groups', () => {
-        let actual: ExpressionValue
+        let actual: ExpressionInnerValue
   
         for (let [input, expected] of [
           // scalar
