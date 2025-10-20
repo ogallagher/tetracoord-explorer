@@ -214,14 +214,14 @@ describe('tetracoord', () => {
             ['0d7.1i - 0d0.53i', new PowerScalar({digits: (7 + 1/9) - (0.5 + 3/90)})],
             ['1.9i - sinpi6', new PowerScalar({digits: 1+(9/9) - 0.5})],
             ['0q3210.1i - 0q0001.1i', new PowerScalar({digits: new Uint8Array([0b11100011]), radix: RadixType.Q})],
-            // ['0q3210 - -0q0001', new PowerScalar({digits: new Uint8Array([0b11100101]), radix: RadixType.Q})],
+            ['0q3210 - -0q0001', new PowerScalar({digits: new Uint8Array([0b11100101]), radix: RadixType.Q})],
 
             // add
             ['6.5i + 0.5i', new PowerScalar({digits: 6+(5/9) + (5/9)})],
-            // ['0q12.2 + 0.5', new PowerScalar({digits: new Uint8Array([0b0111]), radix: RadixType.Q})], // 0q12.2 + 0q0.2 = 0q13
-            // ['0q12.2 + 0b0.1', new PowerScalar({digits: new Uint8Array([0b0111]), radix: RadixType.Q})],
-            // ['-sinpi6 + -sinpi6', -1],
-            // ['0q32103111 + 0q00200222', new PowerScalar({digits: new Uint8Array([0b11101100, 255]), radix: RadixType.Q})]
+            ['0q12.2 + 0.5', new PowerScalar({digits: new Uint8Array([0b0111]), radix: RadixType.Q})], // 0q12.2 + 0q0.2 = 0q13
+            ['0q12.2 + 0b0.1', new PowerScalar({digits: new Uint8Array([0b0111]), radix: RadixType.Q})],
+            ['-sinpi6 + -sinpi6', -1],
+            ['0q32103111 + 0q00200222', new PowerScalar({digits: new Uint8Array([0b11101100, 255]), radix: RadixType.Q})]
           ]) {
             test(input as string, expected as number|PowerScalar, 1e-7)
           }
